@@ -1,0 +1,21 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q --disable-warnings --maxfail=1"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101", "B008"]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/services/collectors/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 65

@@ -1,0 +1,25 @@
+app = "replace-with-lifebridge-api-name"
+primary_region = "sin"
+
+[build]
+  dockerfile = "apps/backend/Dockerfile"
+
+[env]
+  APP_ENV = "production"
+  PORT = "8080"
+  ENABLE_DEMO_SEED = "false"
+  ENABLE_SCHEDULER = "false"
+  FORCE_HTTPS = "true"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/api/v1/health"

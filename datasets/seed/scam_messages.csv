@@ -1,0 +1,5 @@
+message_id,text,label,signals
+msg-001,Your parcel is waiting. Pay a small release fee using this shortened link now.,scam,advance fee;urgency;shortened link
+msg-002,Your interview is confirmed for Tuesday. No payment is required. Details are on our official careers page.,benign,official process;no payment
+msg-003,Congratulations! Send your OTP to receive a fully funded scholarship.,scam,credential request;scholarship impersonation
+msg-004,The university admissions office has published results on its official domain.,benign,official domain;informational

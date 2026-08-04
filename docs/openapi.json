@@ -1,0 +1,2493 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LifeBridge AI",
+    "version": "1.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Readiness",
+        "operationId": "readiness_api_v1_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feed": {
+      "get": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Get Feed",
+        "operationId": "get_feed_api_v1_feed_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Location"
+            }
+          },
+          {
+            "name": "verified_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Verified Only"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeedItemOut"
+                  },
+                  "title": "Response Get Feed Api V1 Feed Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/feed/{item_id}": {
+      "get": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Get Feed Item",
+        "operationId": "get_feed_item_api_v1_feed__item_id__get",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedItemOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recommendations": {
+      "post": {
+        "tags": [
+          "feed"
+        ],
+        "summary": "Recommendations",
+        "operationId": "recommendations_api_v1_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecommendationOut"
+                  },
+                  "type": "array",
+                  "title": "Response Recommendations Api V1 Recommendations Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profile": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Read Profile",
+        "operationId": "read_profile_api_v1_profile_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Delete Account",
+        "operationId": "delete_account_api_v1_profile_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Update Profile",
+        "operationId": "update_profile_api_v1_profile_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/profile/export": {
+      "get": {
+        "tags": [
+          "profile"
+        ],
+        "summary": "Export Profile",
+        "operationId": "export_profile_api_v1_profile_export_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/saved": {
+      "get": {
+        "tags": [
+          "saved"
+        ],
+        "summary": "List Saved",
+        "operationId": "list_saved_api_v1_saved_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeedItemOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Saved Api V1 Saved Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "saved"
+        ],
+        "summary": "Save Item",
+        "operationId": "save_item_api_v1_saved_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/saved/{feed_item_id}": {
+      "delete": {
+        "tags": [
+          "saved"
+        ],
+        "summary": "Remove Saved",
+        "operationId": "remove_saved_api_v1_saved__feed_item_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "feed_item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Feed Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/trust-check": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Trust Check",
+        "operationId": "trust_check_api_v1_ai_trust_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScamCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScamCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/cv/analyze": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Cv Analyze",
+        "operationId": "cv_analyze_api_v1_ai_cv_analyze_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CvAnalyzeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CvAnalyzeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/disaster-risk": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Disaster Risk",
+        "operationId": "disaster_risk_api_v1_ai_disaster_risk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisasterRiskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisasterRiskResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/decision-graph": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Decision Graph",
+        "operationId": "decision_graph_api_v1_ai_decision_graph_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionGraphRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionGraphResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/services/nearby": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "Nearby Services",
+        "operationId": "nearby_services_api_v1_services_nearby_get",
+        "parameters": [
+          {
+            "name": "latitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 90,
+              "minimum": -90,
+              "title": "Latitude"
+            }
+          },
+          {
+            "name": "longitude",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "maximum": 180,
+              "minimum": -180,
+              "title": "Longitude"
+            }
+          },
+          {
+            "name": "radius_m",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20000,
+              "minimum": 100,
+              "default": 5000,
+              "title": "Radius M"
+            }
+          },
+          {
+            "name": "service_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40,
+              "default": "all",
+              "title": "Service Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NearbyServiceOut"
+                  },
+                  "title": "Response Nearby Services Api V1 Services Nearby Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/tokens": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Register Token",
+        "operationId": "register_token_api_v1_notifications_tokens_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationTokenCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "tags": [
+          "sources"
+        ],
+        "summary": "Source Status",
+        "operationId": "source_status_api_v1_sources_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/feed-items": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Feed Item",
+        "operationId": "create_feed_item_api_v1_admin_feed_items_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-admin-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedItemCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedItemOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/feed-items/import-csv": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Import Feed Csv",
+        "description": "Import verified opportunities from the documented CSV template.\n\nIntended for official scholarship/job records that do not expose an API.\nThe endpoint validates each row through ``FeedItemCreate`` and caps upload\nsize/row count to limit abuse.",
+        "operationId": "import_feed_csv_api_v1_admin_feed_items_import_csv_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-admin-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_feed_csv_api_v1_admin_feed_items_import_csv_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refresh": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_v1_admin_refresh_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-admin-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Admin-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_import_feed_csv_api_v1_admin_feed_items_import_csv_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_feed_csv_api_v1_admin_feed_items_import_csv_post"
+      },
+      "CvAnalyzeRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 50000,
+            "minLength": 20,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "CvAnalyzeRequest"
+      },
+      "CvAnalyzeResponse": {
+        "properties": {
+          "extracted_skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extracted Skills"
+          },
+          "detected_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected Email"
+          },
+          "detected_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected Phone"
+          },
+          "experience_years": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experience Years"
+          },
+          "recommended_roles": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Recommended Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extracted_skills",
+          "detected_email",
+          "detected_phone",
+          "experience_years",
+          "recommended_roles"
+        ],
+        "title": "CvAnalyzeResponse"
+      },
+      "DecisionGraphRequest": {
+        "properties": {
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Skills"
+          },
+          "preferred_categories": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "job",
+                "scholarship",
+                "disaster",
+                "weather",
+                "service",
+                "safety",
+                "learning"
+              ]
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Preferred Categories"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Country",
+            "default": ""
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "City",
+            "default": ""
+          },
+          "study_level": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Study Level",
+            "default": ""
+          },
+          "field_of_study": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Field Of Study",
+            "default": ""
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Interests"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 20
+          },
+          "max_items": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Max Items",
+            "default": 15
+          }
+        },
+        "type": "object",
+        "title": "DecisionGraphRequest"
+      },
+      "DecisionGraphResponse": {
+        "properties": {
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "top_items": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationOut"
+            },
+            "type": "array",
+            "title": "Top Items"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nodes",
+          "edges",
+          "top_items",
+          "explanation"
+        ],
+        "title": "DecisionGraphResponse"
+      },
+      "DisasterRiskRequest": {
+        "properties": {
+          "rainfall_mm": {
+            "type": "number",
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Rainfall Mm"
+          },
+          "river_level_m": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "River Level M"
+          },
+          "soil_moisture": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Soil Moisture"
+          },
+          "slope_degrees": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": 0.0,
+            "title": "Slope Degrees"
+          },
+          "temperature_c": {
+            "type": "number",
+            "maximum": 70.0,
+            "minimum": -80.0,
+            "title": "Temperature C"
+          },
+          "wind_kph": {
+            "type": "number",
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Wind Kph"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rainfall_mm",
+          "river_level_m",
+          "soil_moisture",
+          "slope_degrees",
+          "temperature_c",
+          "wind_kph"
+        ],
+        "title": "DisasterRiskRequest"
+      },
+      "DisasterRiskResponse": {
+        "properties": {
+          "risk_score": {
+            "type": "number",
+            "title": "Risk Score"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Risk Level"
+          },
+          "drivers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Drivers"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "risk_score",
+          "risk_level",
+          "drivers",
+          "model_version"
+        ],
+        "title": "DisasterRiskResponse"
+      },
+      "FeedItemCreate": {
+        "properties": {
+          "external_id": {
+            "type": "string",
+            "maxLength": 180,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9._:-]+$",
+            "title": "External Id"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "job",
+              "scholarship",
+              "disaster",
+              "weather",
+              "service",
+              "safety",
+              "learning"
+            ],
+            "title": "Category"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 250,
+            "minLength": 5,
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 10,
+            "title": "Summary"
+          },
+          "source_name": {
+            "type": "string",
+            "maxLength": 180,
+            "minLength": 2,
+            "title": "Source Name"
+          },
+          "source_url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Source Url"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2083,
+                "minLength": 1,
+                "format": "uri"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 180,
+            "title": "Location",
+            "default": "Global"
+          },
+          "country_code": {
+            "type": "string",
+            "maxLength": 8,
+            "title": "Country Code",
+            "default": ""
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Tags"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "default": "low"
+          },
+          "verification_status": {
+            "type": "string",
+            "enum": [
+              "unverified",
+              "verified",
+              "demo",
+              "community"
+            ],
+            "title": "Verification Status",
+            "default": "unverified"
+          },
+          "source_reliability": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Source Reliability",
+            "default": 0.5
+          },
+          "funding_type": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Funding Type",
+            "default": ""
+          },
+          "study_level": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Study Level",
+            "default": ""
+          },
+          "employment_type": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Employment Type",
+            "default": ""
+          },
+          "salary_text": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Salary Text",
+            "default": ""
+          },
+          "eligibility": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Eligibility",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "external_id",
+          "category",
+          "title",
+          "summary",
+          "source_name",
+          "source_url",
+          "published_at"
+        ],
+        "title": "FeedItemCreate"
+      },
+      "FeedItemOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At"
+          },
+          "collected_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Collected At"
+          },
+          "last_checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Checked At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code",
+            "default": ""
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "tags": {
+            "type": "string",
+            "title": "Tags"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "source_reliability": {
+            "type": "number",
+            "title": "Source Reliability"
+          },
+          "funding_type": {
+            "type": "string",
+            "title": "Funding Type",
+            "default": ""
+          },
+          "study_level": {
+            "type": "string",
+            "title": "Study Level",
+            "default": ""
+          },
+          "employment_type": {
+            "type": "string",
+            "title": "Employment Type",
+            "default": ""
+          },
+          "salary_text": {
+            "type": "string",
+            "title": "Salary Text",
+            "default": ""
+          },
+          "eligibility": {
+            "type": "string",
+            "title": "Eligibility",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "external_id",
+          "category",
+          "title",
+          "summary",
+          "source_name",
+          "source_url",
+          "published_at",
+          "collected_at",
+          "last_checked_at",
+          "updated_at",
+          "expires_at",
+          "location",
+          "tags",
+          "severity",
+          "verification_status",
+          "source_reliability"
+        ],
+        "title": "FeedItemOut"
+      },
+      "GraphEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "relation": {
+            "type": "string",
+            "title": "Relation"
+          },
+          "weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weight",
+            "default": 1.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "relation"
+        ],
+        "title": "GraphEdge"
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "attributes": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Attributes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "label"
+        ],
+        "title": "GraphNode"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "NearbyServiceOut": {
+        "properties": {
+          "external_id": {
+            "type": "string",
+            "title": "External Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km"
+          },
+          "accessibility": {
+            "type": "string",
+            "title": "Accessibility",
+            "default": "unknown"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address",
+            "default": ""
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "external_id",
+          "name",
+          "service_type",
+          "latitude",
+          "longitude"
+        ],
+        "title": "NearbyServiceOut"
+      },
+      "NotificationTokenCreate": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 20,
+            "title": "Token"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "android",
+              "web",
+              "ios"
+            ],
+            "title": "Platform",
+            "default": "android"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Topics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "NotificationTokenCreate"
+      },
+      "RecommendationOut": {
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/FeedItemOut"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item",
+          "score",
+          "reasons"
+        ],
+        "title": "RecommendationOut"
+      },
+      "RecommendationRequest": {
+        "properties": {
+          "skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Skills"
+          },
+          "preferred_categories": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "job",
+                "scholarship",
+                "disaster",
+                "weather",
+                "service",
+                "safety",
+                "learning"
+              ]
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Preferred Categories"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Country",
+            "default": ""
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "City",
+            "default": ""
+          },
+          "study_level": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Study Level",
+            "default": ""
+          },
+          "field_of_study": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Field Of Study",
+            "default": ""
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 30,
+            "title": "Interests"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 20
+          }
+        },
+        "type": "object",
+        "title": "RecommendationRequest"
+      },
+      "RegisterRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 12,
+            "title": "Password"
+          },
+          "display_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Display Name"
+          },
+          "country": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Country",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "display_name"
+        ],
+        "title": "RegisterRequest"
+      },
+      "SaveItemRequest": {
+        "properties": {
+          "feed_item_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Feed Item Id"
+          },
+          "reminder_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feed_item_id"
+        ],
+        "title": "SaveItemRequest"
+      },
+      "ScamCheckRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 3,
+            "title": "Text"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ScamCheckRequest"
+      },
+      "ScamCheckResponse": {
+        "properties": {
+          "risk_score": {
+            "type": "number",
+            "title": "Risk Score"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level"
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "likely_legitimate",
+              "suspicious",
+              "likely_scam"
+            ],
+            "title": "Label"
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "safe_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Safe Actions"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "risk_score",
+          "risk_level",
+          "label",
+          "evidence",
+          "safe_actions",
+          "model_version"
+        ],
+        "title": "ScamCheckResponse"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "TokenResponse"
+      },
+      "UserProfileOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "country": {
+            "type": "string",
+            "title": "Country"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "study_level": {
+            "type": "string",
+            "title": "Study Level"
+          },
+          "field_of_study": {
+            "type": "string",
+            "title": "Field Of Study"
+          },
+          "skills": {
+            "type": "string",
+            "title": "Skills"
+          },
+          "interests": {
+            "type": "string",
+            "title": "Interests"
+          },
+          "preferred_categories": {
+            "type": "string",
+            "title": "Preferred Categories"
+          },
+          "accessibility_preferences": {
+            "type": "string",
+            "title": "Accessibility Preferences"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "display_name",
+          "country",
+          "city",
+          "study_level",
+          "field_of_study",
+          "skills",
+          "interests",
+          "preferred_categories",
+          "accessibility_preferences",
+          "language"
+        ],
+        "title": "UserProfileOut"
+      },
+      "UserProfileUpdate": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "study_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Level"
+          },
+          "field_of_study": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Of Study"
+          },
+          "skills": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skills"
+          },
+          "interests": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interests"
+          },
+          "preferred_categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "job",
+                    "scholarship",
+                    "disaster",
+                    "weather",
+                    "service",
+                    "safety",
+                    "learning"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Categories"
+          },
+          "accessibility_preferences": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accessibility Preferences"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          }
+        },
+        "type": "object",
+        "title": "UserProfileUpdate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

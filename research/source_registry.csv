@@ -1,0 +1,15 @@
+source_key,source_name,category,official_url,machine_readable,authentication,default_enabled,integration_method,project_file,notes
+nasa_eonet,NASA EONET,disaster,https://eonet.gsfc.nasa.gov/docs/v3,yes,none,true,REST API,apps/backend/app/services/collectors/eonet.py,Near-real-time natural event metadata
+open_meteo,Open-Meteo,weather,https://open-meteo.com/en/docs,yes,none,true,REST API,apps/backend/app/services/collectors/open_meteo.py,Open/non-commercial access without a key subject to terms
+openstreetmap,OpenStreetMap and Overpass,services,https://wiki.openstreetmap.org/wiki/Overpass_API,yes,none,true,Overpass query,apps/backend/app/services/nearby_services.py,Cache and respect public-instance fair-use limits
+gdacs,GDACS,disaster,https://www.gdacs.org/feed_reference.aspx,yes,none,true,RSS/XML,apps/backend/app/services/collectors/gdacs.py,Global disaster alerts
+reliefweb,ReliefWeb API,disaster,https://apidoc.reliefweb.int,yes,approved appname,false,REST API,apps/backend/app/services/collectors/reliefweb.py,Pre-approved appname required
+usajobs,USAJOBS,job,https://developer.usajobs.gov,yes,free API key and user-agent,false,REST API,apps/backend/app/services/collectors/usajobs.py,US federal vacancies
+adzuna,Adzuna,job,https://developer.adzuna.com,yes,app ID and key,false,REST API,apps/backend/app/services/collectors/adzuna.py,Optional provider; review current plan
+onet,O*NET,skills,https://www.onetcenter.org/database.html,download,none,false,local dataset,ml/scripts/build_skill_index.py,Attribution and licence requirements apply
+firebase,Firebase Cloud Messaging,notifications,https://firebase.google.com/docs/cloud-messaging/flutter/get-started,yes,service account,false,server SDK,apps/backend/app/services/notifications.py,Private service-account file stays on backend
+erasmus_mundus,Erasmus Mundus Joint Masters,scholarship,https://erasmus-plus.ec.europa.eu/opportunities/individuals/students/erasmus-mundus-joint-masters,no public API assumed,none,false,admin verified/RSS when authorised,config/rss_sources.yaml,Use official programme page and catalogue links
+daad,DAAD Scholarship Database,scholarship,https://www.daad.de/stipdb-redirect/,no public API assumed,none,false,admin verified/RSS when authorised,config/rss_sources.yaml,Preserve official source URL
+chevening,Chevening Scholarships,scholarship,https://www.chevening.org/scholarships/,no public API assumed,none,false,admin verified/RSS when authorised,config/rss_sources.yaml,Country-specific eligibility and dates
+commonwealth,Commonwealth Scholarship Commission,scholarship,https://cscuk.fcdo.gov.uk/about-us/scholarships/,no public API assumed,none,false,admin verified/RSS when authorised,config/rss_sources.yaml,Use official programme records
+fulbright,Fulbright Foreign Student Program,scholarship,https://exchanges.state.gov/non-us/program/fulbright-foreign-student-program,no public API assumed,none,false,admin verified/RSS when authorised,config/rss_sources.yaml,Country processes vary

@@ -1,0 +1,3 @@
+id,name,type,latitude,longitude,wheelchair,address
+osm-demo-1,City General Hospital,hospital,31.5208,74.3572,yes,"Demo Road, Lahore"
+osm-demo-2,Community Shelter,social_facility,31.514,74.35,limited,"Demo Street, Lahore"

@@ -1,0 +1,262 @@
+path,area,purpose,size_bytes
+.dockerignore,Repository,Container build/orchestration,247
+.env.example,Repository,Project support file,1610
+.github/dependabot.yml,CI/Security,Configuration or automation workflow,576
+.github/workflows/ci.yml,CI/Security,Configuration or automation workflow,1861
+.github/workflows/codeql.yml,CI/Security,Configuration or automation workflow,514
+.github/workflows/dependency-review.yml,CI/Security,Configuration or automation workflow,272
+.github/workflows/secret-scan.yml,CI/Security,Configuration or automation workflow,314
+.gitignore,Repository,Project support file,673
+.nvmrc,Repository,Project support file,3
+.python-version,Repository,Project support file,5
+apps/backend/.env.example,FastAPI backend,Project support file,117
+apps/backend/alembic.ini,FastAPI backend,Project support file,591
+apps/backend/alembic/env.py,FastAPI backend,"Python service, model pipeline or utility",1203
+apps/backend/alembic/script.py.mako,FastAPI backend,Project support file,589
+apps/backend/alembic/versions/20260804_0001_initial.py,FastAPI backend,"Python service, model pipeline or utility",6529
+apps/backend/app/__init__.py,FastAPI backend,"Python service, model pipeline or utility",0
+apps/backend/app/api/__init__.py,FastAPI backend,"Python service, model pipeline or utility",0
+apps/backend/app/api/router.py,FastAPI backend,"Python service, model pipeline or utility",575
+apps/backend/app/api/routes/__init__.py,FastAPI backend,"Python service, model pipeline or utility",0
+apps/backend/app/api/routes/admin.py,FastAPI backend,"Python service, model pipeline or utility",5088
+apps/backend/app/api/routes/ai.py,FastAPI backend,"Python service, model pipeline or utility",1243
+apps/backend/app/api/routes/auth.py,FastAPI backend,"Python service, model pipeline or utility",1546
+apps/backend/app/api/routes/feed.py,FastAPI backend,"Python service, model pipeline or utility",2648
+apps/backend/app/api/routes/health.py,FastAPI backend,"Python service, model pipeline or utility",839
+apps/backend/app/api/routes/notifications.py,FastAPI backend,"Python service, model pipeline or utility",1154
+apps/backend/app/api/routes/profile.py,FastAPI backend,"Python service, model pipeline or utility",2223
+apps/backend/app/api/routes/saved.py,FastAPI backend,"Python service, model pipeline or utility",1721
+apps/backend/app/api/routes/services.py,FastAPI backend,"Python service, model pipeline or utility",572
+apps/backend/app/api/routes/sources.py,FastAPI backend,"Python service, model pipeline or utility",1460
+apps/backend/app/core/__init__.py,FastAPI backend,"Python service, model pipeline or utility",0
+apps/backend/app/core/config.py,FastAPI backend,"Python service, model pipeline or utility",3913
+apps/backend/app/core/database.py,FastAPI backend,"Python service, model pipeline or utility",999
+apps/backend/app/core/middleware.py,FastAPI backend,"Python service, model pipeline or utility",3303
+apps/backend/app/core/security.py,FastAPI backend,"Python service, model pipeline or utility",4011
+apps/backend/app/main.py,FastAPI backend,"Python service, model pipeline or utility",3454
+apps/backend/app/models.py,FastAPI backend,"Python service, model pipeline or utility",6880
+apps/backend/app/schemas.py,FastAPI backend,"Python service, model pipeline or utility",7054
+apps/backend/app/services/__init__.py,FastAPI backend,"Python service, model pipeline or utility",0
+apps/backend/app/services/cache.py,FastAPI backend,"Python service, model pipeline or utility",1349
+apps/backend/app/services/collector_manager.py,FastAPI backend,"Python service, model pipeline or utility",1268
+apps/backend/app/services/collectors/__init__.py,FastAPI backend,"Python service, model pipeline or utility",157
+apps/backend/app/services/collectors/adzuna.py,FastAPI backend,"Python service, model pipeline or utility",2140
+apps/backend/app/services/collectors/common.py,FastAPI backend,"Python service, model pipeline or utility",1044
+apps/backend/app/services/collectors/eonet.py,FastAPI backend,"Python service, model pipeline or utility",2057
+apps/backend/app/services/collectors/gdacs.py,FastAPI backend,"Python service, model pipeline or utility",2510
+apps/backend/app/services/collectors/open_meteo.py,FastAPI backend,"Python service, model pipeline or utility",2901
+apps/backend/app/services/collectors/reliefweb.py,FastAPI backend,"Python service, model pipeline or utility",2298
+apps/backend/app/services/collectors/rss.py,FastAPI backend,"Python service, model pipeline or utility",3321
+apps/backend/app/services/collectors/usajobs.py,FastAPI backend,"Python service, model pipeline or utility",2796
+apps/backend/app/services/cv_analysis.py,FastAPI backend,"Python service, model pipeline or utility",3175
+apps/backend/app/services/decision_graph.py,FastAPI backend,"Python service, model pipeline or utility",3377
+apps/backend/app/services/disaster_risk.py,FastAPI backend,"Python service, model pipeline or utility",1817
+apps/backend/app/services/feed_store.py,FastAPI backend,"Python service, model pipeline or utility",1042
+apps/backend/app/services/model_loader.py,FastAPI backend,"Python service, model pipeline or utility",569
+apps/backend/app/services/nearby_services.py,FastAPI backend,"Python service, model pipeline or utility",3312
+apps/backend/app/services/notifications.py,FastAPI backend,"Python service, model pipeline or utility",1319
+apps/backend/app/services/recommendation.py,FastAPI backend,"Python service, model pipeline or utility",3539
+apps/backend/app/services/scam_detection.py,FastAPI backend,"Python service, model pipeline or utility",3460
+apps/backend/app/services/seed.py,FastAPI backend,"Python service, model pipeline or utility",1599
+apps/backend/app/utils/network.py,FastAPI backend,"Python service, model pipeline or utility",1243
+apps/backend/app/worker.py,FastAPI backend,"Python service, model pipeline or utility",2172
+apps/backend/docker-entrypoint.sh,FastAPI backend,Container build/orchestration,496
+apps/backend/Dockerfile,FastAPI backend,Container build/orchestration,756
+apps/backend/pyproject.toml,FastAPI backend,Project support file,420
+apps/backend/requirements-dev.txt,FastAPI backend,Project support file,127
+apps/backend/requirements.txt,FastAPI backend,Project support file,455
+apps/backend/tests/conftest.py,FastAPI backend,Automated test,675
+apps/backend/tests/test_admin_import.py,FastAPI backend,Automated test,1109
+apps/backend/tests/test_ai.py,FastAPI backend,Automated test,1550
+apps/backend/tests/test_api.py,FastAPI backend,Automated test,1082
+apps/backend/tests/test_auth.py,FastAPI backend,Automated test,1863
+apps/backend/tests/test_collectors.py,FastAPI backend,Automated test,638
+apps/backend/tests/test_decision_graph.py,FastAPI backend,Automated test,584
+apps/mobile/.fvmrc,Flutter mobile,Project support file,26
+apps/mobile/.metadata,Flutter mobile,Project support file,316
+apps/mobile/analysis_options.yaml,Flutter mobile,Configuration or automation workflow,162
+apps/mobile/android/app/build.gradle.kts,Flutter mobile,Project support file,2070
+apps/mobile/android/app/proguard-rules.pro,Flutter mobile,Project support file,160
+apps/mobile/android/app/src/main/AndroidManifest.xml,Flutter mobile,Project support file,1854
+apps/mobile/android/app/src/main/kotlin/com/lifebridge/ai/MainActivity.kt,Flutter mobile,Project support file,117
+apps/mobile/android/app/src/main/res/drawable-v21/launch_background.xml,Flutter mobile,Project support file,178
+apps/mobile/android/app/src/main/res/drawable/launch_background.xml,Flutter mobile,Project support file,178
+apps/mobile/android/app/src/main/res/mipmap-hdpi/ic_launcher.png,Flutter mobile,Workflow or UI reference image,740
+apps/mobile/android/app/src/main/res/mipmap-mdpi/ic_launcher.png,Flutter mobile,Workflow or UI reference image,548
+apps/mobile/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png,Flutter mobile,Workflow or UI reference image,902
+apps/mobile/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png,Flutter mobile,Workflow or UI reference image,1264
+apps/mobile/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png,Flutter mobile,Workflow or UI reference image,1610
+apps/mobile/android/app/src/main/res/values-night/styles.xml,Flutter mobile,Project support file,405
+apps/mobile/android/app/src/main/res/values/styles.xml,Flutter mobile,Project support file,405
+apps/mobile/android/build.gradle.kts,Flutter mobile,Project support file,485
+apps/mobile/android/gradle.properties,Flutter mobile,Project support file,166
+apps/mobile/android/gradle/wrapper/gradle-wrapper.properties,Flutter mobile,Project support file,201
+apps/mobile/android/key.properties.example,Flutter mobile,Project support file,211
+apps/mobile/android/local.properties.example,Flutter mobile,Project support file,162
+apps/mobile/android/settings.gradle.kts,Flutter mobile,Project support file,708
+apps/mobile/assets/demo/README.txt,Flutter mobile,Project support file,113
+apps/mobile/lib/config/app_config.dart,Flutter mobile,Flutter/Dart application component,139
+apps/mobile/lib/main.dart,Flutter mobile,Flutter/Dart application component,1477
+apps/mobile/lib/models/feed_item.dart,Flutter mobile,Flutter/Dart application component,1779
+apps/mobile/lib/models/scam_result.dart,Flutter mobile,Flutter/Dart application component,689
+apps/mobile/lib/screens/disaster_screen.dart,Flutter mobile,Flutter/Dart application component,2256
+apps/mobile/lib/screens/home_screen.dart,Flutter mobile,Flutter/Dart application component,6298
+apps/mobile/lib/screens/opportunities_screen.dart,Flutter mobile,Flutter/Dart application component,1962
+apps/mobile/lib/screens/profile_screen.dart,Flutter mobile,Flutter/Dart application component,2204
+apps/mobile/lib/screens/root_shell.dart,Flutter mobile,Flutter/Dart application component,2842
+apps/mobile/lib/screens/services_screen.dart,Flutter mobile,Flutter/Dart application component,4210
+apps/mobile/lib/screens/skills_screen.dart,Flutter mobile,Flutter/Dart application component,3522
+apps/mobile/lib/screens/trust_scanner_screen.dart,Flutter mobile,Flutter/Dart application component,4062
+apps/mobile/lib/services/api_client.dart,Flutter mobile,Flutter/Dart application component,1459
+apps/mobile/lib/services/feed_service.dart,Flutter mobile,Flutter/Dart application component,523
+apps/mobile/lib/theme/theme_controller.dart,Flutter mobile,Flutter/Dart application component,750
+apps/mobile/lib/widgets/feed_card.dart,Flutter mobile,Flutter/Dart application component,5072
+apps/mobile/pubspec.yaml,Flutter mobile,Configuration or automation workflow,583
+apps/mobile/README.md,Flutter mobile,Project documentation,644
+apps/mobile/test/widget_test.dart,Flutter mobile,Automated test,780
+apps/mobile/web/index.html,Flutter mobile,Project support file,415
+apps/mobile/web/manifest.json,Flutter mobile,"Schema, API specification, metadata or tool configuration",205
+apps/web/.env.example,Web frontend,Project support file,47
+apps/web/app/about/page.tsx,Web frontend,Next.js/TypeScript application component,829
+apps/web/app/accessibility/page.tsx,Web frontend,Next.js/TypeScript application component,2801
+apps/web/app/decision-graph/page.tsx,Web frontend,Next.js/TypeScript application component,2936
+apps/web/app/disasters/page.tsx,Web frontend,Next.js/TypeScript application component,1097
+apps/web/app/globals.css,Web frontend,Project support file,16925
+apps/web/app/layout.tsx,Web frontend,Next.js/TypeScript application component,426
+apps/web/app/opportunities/page.tsx,Web frontend,Next.js/TypeScript application component,1089
+apps/web/app/page.tsx,Web frontend,Next.js/TypeScript application component,3782
+apps/web/app/profile/page.tsx,Web frontend,Next.js/TypeScript application component,2283
+apps/web/app/saved/page.tsx,Web frontend,Next.js/TypeScript application component,484
+apps/web/app/services/page.tsx,Web frontend,Next.js/TypeScript application component,2088
+apps/web/app/skills/page.tsx,Web frontend,Next.js/TypeScript application component,2699
+apps/web/app/trust-scanner/page.tsx,Web frontend,Next.js/TypeScript application component,1944
+apps/web/components/AppShell.tsx,Web frontend,Next.js/TypeScript application component,354
+apps/web/components/FeedCard.tsx,Web frontend,Next.js/TypeScript application component,2337
+apps/web/components/FeedFilters.tsx,Web frontend,Next.js/TypeScript application component,1218
+apps/web/components/LoadingSkeleton.tsx,Web frontend,Next.js/TypeScript application component,128
+apps/web/components/MobileNav.tsx,Web frontend,Next.js/TypeScript application component,409
+apps/web/components/PageIntro.tsx,Web frontend,Next.js/TypeScript application component,183
+apps/web/components/RelativeTime.tsx,Web frontend,Next.js/TypeScript application component,409
+apps/web/components/Sidebar.tsx,Web frontend,Next.js/TypeScript application component,860
+apps/web/components/SourceBadge.tsx,Web frontend,Next.js/TypeScript application component,236
+apps/web/components/StatsGrid.tsx,Web frontend,Next.js/TypeScript application component,837
+apps/web/components/ThemeToggle.tsx,Web frontend,Next.js/TypeScript application component,546
+apps/web/components/TopBar.tsx,Web frontend,Next.js/TypeScript application component,1003
+apps/web/Dockerfile,Web frontend,Container build/orchestration,637
+apps/web/eslint.config.mjs,Web frontend,Project support file,308
+apps/web/lib/api.ts,Web frontend,Next.js/TypeScript application component,2443
+apps/web/lib/profile.ts,Web frontend,Next.js/TypeScript application component,1104
+apps/web/lib/sample-data.ts,Web frontend,Next.js/TypeScript application component,9812
+apps/web/lib/types.ts,Web frontend,Next.js/TypeScript application component,2011
+apps/web/next-env.d.ts,Web frontend,Next.js/TypeScript application component,131
+apps/web/next.config.ts,Web frontend,Next.js/TypeScript application component,902
+apps/web/package.json,Web frontend,"Schema, API specification, metadata or tool configuration",547
+apps/web/public/.gitkeep,Web frontend,Project support file,0
+apps/web/README.md,Web frontend,Project documentation,419
+apps/web/tsconfig.json,Web frontend,"Schema, API specification, metadata or tool configuration",564
+apps/web/vercel.json,Web frontend,"Schema, API specification, metadata or tool configuration",28
+CHANGELOG.md,Repository,Project documentation,587
+config/api_sources.yaml,Configuration,Configuration or automation workflow,2284
+config/apis.env.example,Configuration,Project support file,1610
+config/rss_sources.yaml,Configuration,Configuration or automation workflow,805
+config/secrets/README.md,Configuration,Project documentation,218
+CONTRIBUTING.md,Repository,Project documentation,456
+datasets/dataset_cards/seed_feed.md,Datasets,Project documentation,370
+datasets/dataset_cards/synthetic_disaster_risk.md,Datasets,Project documentation,413
+datasets/dataset_cards/synthetic_scam_messages.md,Datasets,Project documentation,494
+datasets/LICENSE_NOTES.md,Datasets,Project documentation,609
+datasets/README.md,Datasets,Project documentation,1093
+datasets/samples/jobs.csv,Datasets,"Testing data, source registry or import template",358
+datasets/samples/scholarships.csv,Datasets,"Testing data, source registry or import template",336
+datasets/samples/services.csv,Datasets,"Testing data, source registry or import template",224
+datasets/schemas/feed_item.schema.json,Datasets,"Schema, API specification, metadata or tool configuration",832
+datasets/schemas/user_profile.schema.json,Datasets,"Schema, API specification, metadata or tool configuration",440
+datasets/seed/accessibility_places.csv,Datasets,"Testing data, source registry or import template",318
+datasets/seed/feed_items.csv,Datasets,"Testing data, source registry or import template",3496
+datasets/seed/scam_messages.csv,Datasets,"Testing data, source registry or import template",564
+datasets/seed/user_profiles.csv,Datasets,"Testing data, source registry or import template",325
+datasets/synthetic/disaster_risk.csv,Datasets,"Testing data, source registry or import template",14525
+datasets/synthetic/scam_messages.csv,Datasets,"Testing data, source registry or import template",15232
+datasets/synthetic/skill_roles.csv,Datasets,"Testing data, source registry or import template",744
+datasets/templates/feed_import_template.csv,Datasets,"Testing data, source registry or import template",560
+datasets/templates/job_import_template.csv,Datasets,"Testing data, source registry or import template",538
+datasets/templates/scholarship_import_template.csv,Datasets,"Testing data, source registry or import template",590
+docker-compose.yml,Repository,Container build/orchestration,2721
+docs/ADMIN_GUIDE.md,Documentation,Project documentation,1171
+docs/API_ENDPOINTS.md,Documentation,Project documentation,1803
+docs/API_MANUAL_SETUP.md,Documentation,Project documentation,905
+docs/API_SETUP.md,Documentation,Project documentation,767
+docs/APK_SETUP.md,Documentation,Project documentation,1286
+docs/ARCHITECTURE.md,Documentation,Project documentation,1634
+docs/assets/data_pipeline.png,Documentation,Workflow or UI reference image,1393912
+docs/assets/deployment_workflow.png,Documentation,Workflow or UI reference image,1465478
+docs/assets/frontend_showcase.png,Documentation,Workflow or UI reference image,1769128
+docs/assets/overall_workflow.png,Documentation,Workflow or UI reference image,1364577
+docs/assets/README.md,Documentation,Project documentation,226
+docs/assets/user_journey.png,Documentation,Workflow or UI reference image,1451219
+docs/BACKEND_DEPLOY.md,Documentation,Project documentation,998
+docs/CLAIM_EVIDENCE_POLICY.md,Documentation,Project documentation,1061
+docs/COMPONENTS.md,Documentation,Project documentation,2486
+docs/DATA_DICTIONARY.md,Documentation,Project documentation,1027
+docs/DATA_GOVERNANCE.md,Documentation,Project documentation,746
+docs/DATASETS.md,Documentation,Project documentation,1458
+docs/DEPLOYMENT_MATRIX.md,Documentation,Project documentation,865
+docs/END_TO_END_WORKFLOW.md,Documentation,Project documentation,1058
+docs/FIREBASE_SETUP.md,Documentation,Project documentation,867
+docs/LOCAL_SETUP.md,Documentation,Project documentation,814
+docs/NO_PAID_API_PLAN.md,Documentation,Project documentation,517
+docs/openapi.json,Documentation,"Schema, API specification, metadata or tool configuration",61449
+docs/PRODUCTION_CHECKLIST.md,Documentation,Project documentation,1324
+docs/PROJECT_PLAN.md,Documentation,Project documentation,1888
+docs/RESEARCH_METHOD.md,Documentation,Project documentation,962
+docs/RESEARCH_PAPER_OUTLINE.md,Documentation,Project documentation,1138
+docs/SECURITY_IMPLEMENTATION.md,Documentation,Project documentation,1727
+docs/SECURITY_THREAT_MODEL.md,Documentation,Project documentation,1220
+docs/SOURCE_ONBOARDING.md,Documentation,Project documentation,829
+docs/TESTING.md,Documentation,Project documentation,805
+docs/USER_GUIDE.md,Documentation,Project documentation,1203
+docs/VALIDATION_REPORT.md,Documentation,Project documentation,2152
+docs/VERCEL_DEPLOY.md,Documentation,Project documentation,626
+infra/fly.toml.example,Infrastructure,Project support file,503
+infra/railway.toml,Infrastructure,Project support file,250
+infra/README.md,Infrastructure,Project documentation,628
+infra/render.yaml,Infrastructure,Configuration or automation workflow,1709
+LICENSE,Repository,Project support file,1078
+Makefile,Repository,Project support file,850
+ml/model_cards/disaster_risk.md,Machine learning,Project documentation,615
+ml/model_cards/scam_classifier.md,Machine learning,Project documentation,925
+ml/model_cards/skill_index.md,Machine learning,Project documentation,531
+ml/models/disaster_risk.joblib,Machine learning,Persisted baseline model artifact,654905
+ml/models/disaster_risk_metrics.json,Machine learning,"Schema, API specification, metadata or tool configuration",1170
+ml/models/scam_classifier.joblib,Machine learning,Persisted baseline model artifact,17588
+ml/models/scam_classifier_metrics.json,Machine learning,"Schema, API specification, metadata or tool configuration",717
+ml/models/skill_index.joblib,Machine learning,Persisted baseline model artifact,2682
+ml/models/skill_index_metadata.json,Machine learning,"Schema, API specification, metadata or tool configuration",33
+ml/README.md,Machine learning,Project documentation,673
+ml/scripts/build_skill_index.py,Machine learning,"Python service, model pipeline or utility",979
+ml/scripts/train_all.py,Machine learning,"Python service, model pipeline or utility",254
+ml/scripts/train_disaster_risk.py,Machine learning,"Python service, model pipeline or utility",1762
+ml/scripts/train_scam_classifier.py,Machine learning,"Python service, model pipeline or utility",1753
+postman/LifeBridge_AI.postman_collection.json,API tooling,"Schema, API specification, metadata or tool configuration",26719
+postman/README.md,API tooling,Project documentation,257
+README.md,Repository,Project documentation,5694
+research/OFFICIAL_SOURCE_REVIEW.md,Research,Project documentation,3704
+research/SEARCH_STRATEGY.md,Research,Project documentation,1685
+research/SOURCE_EVALUATION_TEMPLATE.csv,Research,"Testing data, source registry or import template",235
+research/source_registry.csv,Research,"Testing data, source registry or import template",2989
+scripts/bootstrap_flutter.ps1,Automation,"Setup, build or operational script",274
+scripts/build_apk.ps1,Automation,"Setup, build or operational script",540
+scripts/build_apk.sh,Automation,"Setup, build or operational script",487
+scripts/generate_android_keystore.ps1,Automation,"Setup, build or operational script",1090
+scripts/generate_secrets.py,Automation,"Python service, model pipeline or utility",776
+scripts/refresh_sources.py,Automation,"Python service, model pipeline or utility",323
+scripts/run_local.ps1,Automation,"Setup, build or operational script",544
+scripts/run_local.sh,Automation,"Setup, build or operational script",347
+scripts/seed_database.py,Automation,"Python service, model pipeline or utility",467
+scripts/setup_local.ps1,Automation,"Setup, build or operational script",897
+scripts/setup_local.sh,Automation,"Setup, build or operational script",834
+scripts/train_models.ps1,Automation,"Setup, build or operational script",232
+scripts/train_models.sh,Automation,"Setup, build or operational script",230
+scripts/validate_project.py,Automation,"Python service, model pipeline or utility",3056
+SECURITY.md,Repository,Project documentation,1473
+THIRD_PARTY_NOTICES.md,Repository,Project documentation,1011

@@ -1,0 +1,4 @@
+import { AppShell } from "@/components/AppShell";
+import { PageIntro } from "@/components/PageIntro";
+import { TopBar } from "@/components/TopBar";
+export default function AboutPage(){return <AppShell><TopBar title="About LifeBridge AI"/><PageIntro title="One platform, five data-science capabilities" description="LifeBridge AI connects opportunities, accessibility, disaster awareness, digital trust and essential services."/><div className="module-grid">{[["SkillBridge","CV analysis, role matching and skill gaps."],["AccessLink","Accessibility-aware places and routes."],["DisasterLink","Weather, event feeds and risk scoring."],["VerifyLink","Message and URL scam-risk evidence."],["ServiceLink","Nearby hospitals, shelters and support."]].map(([a,b])=><article key={a}><h2>{a}</h2><p>{b}</p></article>)}</div></AppShell>}

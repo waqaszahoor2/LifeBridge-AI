@@ -1,0 +1,80 @@
+sources:
+  - key: nasa_eonet
+    name: NASA EONET
+    category: disaster
+    source_type: api
+    key_required: false
+    enabled_by_default: true
+    refresh_minutes: 30
+    reliability: 0.95
+    implementation: apps/backend/app/services/collectors/eonet.py
+  - key: gdacs
+    name: GDACS
+    category: disaster
+    source_type: rss
+    key_required: false
+    enabled_by_default: true
+    refresh_minutes: 30
+    reliability: 0.94
+    implementation: apps/backend/app/services/collectors/gdacs.py
+  - key: open_meteo
+    name: Open-Meteo
+    category: weather
+    source_type: api
+    key_required: false
+    enabled_by_default: true
+    refresh_minutes: 60
+    reliability: 0.90
+    implementation: apps/backend/app/services/collectors/open_meteo.py
+  - key: openstreetmap_overpass
+    name: OpenStreetMap / Overpass
+    category: service
+    source_type: api
+    key_required: false
+    enabled_by_default: true
+    refresh_minutes: 1440
+    reliability: 0.85
+    implementation: apps/backend/app/services/nearby_services.py
+  - key: reliefweb
+    name: ReliefWeb
+    category: disaster
+    source_type: api
+    key_required: appname
+    enabled_by_default: false
+    refresh_minutes: 60
+    reliability: 0.94
+    implementation: apps/backend/app/services/collectors/reliefweb.py
+  - key: usajobs
+    name: USAJOBS
+    category: job
+    source_type: api
+    key_required: true
+    enabled_by_default: false
+    refresh_minutes: 360
+    reliability: 0.96
+    implementation: apps/backend/app/services/collectors/usajobs.py
+  - key: adzuna
+    name: Adzuna
+    category: job
+    source_type: api
+    key_required: true
+    enabled_by_default: false
+    refresh_minutes: 360
+    reliability: 0.82
+    implementation: apps/backend/app/services/collectors/adzuna.py
+  - key: rss_atom
+    name: Authorised RSS/Atom feeds
+    category: scholarship/job/learning
+    source_type: rss
+    key_required: false
+    enabled_by_default: true
+    refresh_minutes: 720
+    reliability: source_specific
+    implementation: apps/backend/app/services/collectors/rss.py
+  - key: firebase
+    name: Firebase Cloud Messaging
+    category: notifications
+    source_type: push
+    key_required: service_account
+    enabled_by_default: false
+    implementation: apps/backend/app/services/notifications.py

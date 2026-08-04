@@ -1,0 +1,52 @@
+# Secrets
+.env
+*.env.local
+config/apis.env
+config/secrets/*
+!config/secrets/README.md
+apps/mobile/android/app/google-services.json
+apps/mobile/ios/Runner/GoogleService-Info.plist
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.db
+*.sqlite*
+
+# Node / Next
+node_modules/
+.next/
+out/
+.vercel/
+npm-debug.log*
+
+# Flutter / Android
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+build/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+*.jks
+*.keystore
+key.properties
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Runtime uploads and logs
+uploads/
+logs/
+*.log

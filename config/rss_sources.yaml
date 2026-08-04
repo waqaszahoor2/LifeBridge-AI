@@ -1,0 +1,25 @@
+# Add only RSS/Atom feeds that the publisher permits you to reuse.
+# Do not add Google Search results, LinkedIn scraping, Facebook scraping or private feeds.
+sources:
+  - key: example-scholarships
+    name: Example Official Scholarship Feed
+    category: scholarship
+    url: https://example.org/scholarships/feed.xml
+    homepage: https://example.org/scholarships
+    location: Global
+    tags: [scholarship, funding]
+    reliability: 0.80
+    verification_status: demo
+    enabled: false
+    limit: 50
+  - key: example-careers
+    name: Example Employer Careers Feed
+    category: job
+    url: https://example.org/careers/feed.xml
+    homepage: https://example.org/careers
+    location: Global
+    tags: [job, career]
+    reliability: 0.80
+    verification_status: demo
+    enabled: false
+    limit: 50

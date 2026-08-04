@@ -1,0 +1,9 @@
+role,skills,category
+Data Analyst,python;sql;excel;power bi;statistics;data visualization,analytics
+Junior Data Scientist,python;pandas;numpy;scikit-learn;machine learning;statistics,data science
+Data Engineer,python;sql;etl;airflow;spark;postgresql;docker,data engineering
+Business Intelligence Analyst,sql;power bi;excel;data visualization;communication,business intelligence
+Machine Learning Engineer,python;pytorch;machine learning;docker;fastapi;git,machine learning
+NLP Engineer,python;nlp;pytorch;machine learning;fastapi;docker,artificial intelligence
+GIS Data Analyst,python;gis;postgis;sql;data visualization;statistics,geospatial
+Mobile Data Product Developer,flutter;dart;fastapi;git;api integration;communication,software

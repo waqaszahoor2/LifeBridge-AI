@@ -1,0 +1,68 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  structural-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/validate_project.py
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/backend/requirements*.txt
+      - run: pip install -r apps/backend/requirements.txt -r apps/backend/requirements-dev.txt
+      - run: ruff check apps/backend scripts ml/scripts
+      - run: pytest apps/backend/tests --cov=apps/backend/app --cov-report=term-missing
+        env:
+          APP_ENV: test
+          DATABASE_URL: sqlite:///./test_ci.db
+          TRUSTED_HOSTS: testserver,localhost,127.0.0.1
+          ALLOWED_ORIGINS: http://testserver
+      - run: bandit -r apps/backend/app -x apps/backend/tests -q
+      - run: pip-audit -r apps/backend/requirements.txt
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install
+      - run: npm run lint
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - working-directory: apps/mobile
+        run: flutter pub get
+      - working-directory: apps/mobile
+        run: flutter analyze
+      - working-directory: apps/mobile
+        run: flutter test

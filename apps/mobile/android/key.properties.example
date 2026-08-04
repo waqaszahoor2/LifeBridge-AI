@@ -1,0 +1,6 @@
+# Copy to android/key.properties after generating your private keystore.
+# Never commit the real file.
+storePassword=replace-me
+keyPassword=replace-me
+keyAlias=lifebridge
+storeFile=app/lifebridge-upload-key.jks

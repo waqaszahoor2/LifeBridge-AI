@@ -1,0 +1,3 @@
+id,title,company,location,skills,published_at,expires_at,source_url
+job-1,Data Analyst,Open Analytics Lab,Remote,python;sql;power bi,2026-08-03T09:00:00Z,2026-08-30T23:59:00Z,https://example.org/job-1
+job-2,Junior Data Engineer,Civic Data Works,"Lahore, Pakistan",python;sql;etl;airflow,2026-08-02T12:00:00Z,2026-08-25T23:59:00Z,https://example.org/job-2

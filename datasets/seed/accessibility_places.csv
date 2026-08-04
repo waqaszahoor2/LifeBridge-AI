@@ -1,0 +1,4 @@
+place_id,name,latitude,longitude,wheelchair,ramp,accessible_toilet,lift,verification
+place-001,City Community Shelter,31.521,74.355,yes,yes,yes,no,verified demo
+place-002,Accessible Skills Centre,31.515,74.35,yes,yes,yes,yes,verified demo
+place-003,General Hospital Demo,31.53,74.365,limited,yes,yes,yes,synthetic

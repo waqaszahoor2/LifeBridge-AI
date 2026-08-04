@@ -1,0 +1,41 @@
+/* eslint-disable */
+// LifeBridge AI — Firebase Push Messaging Service Worker
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("push", (event) => {
+  let data = { title: "LifeBridge AI Update", body: "You have a new opportunity or safety update." };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+    data: data,
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window" }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === "/" && "focus" in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow("/");
+    }),
+  );
+});

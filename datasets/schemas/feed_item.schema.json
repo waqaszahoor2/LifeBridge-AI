@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LifeBridge Feed Item",
+  "type": "object",
+  "required": [
+    "external_id",
+    "category",
+    "title",
+    "source_name",
+    "source_url",
+    "published_at"
+  ],
+  "properties": {
+    "external_id": {
+      "type": "string"
+    },
+    "category": {
+      "enum": [
+        "job",
+        "scholarship",
+        "disaster",
+        "weather",
+        "service",
+        "safety",
+        "learning"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "source_name": {
+      "type": "string"
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_checked_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

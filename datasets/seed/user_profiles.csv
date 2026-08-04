@@ -1,0 +1,3 @@
+user_id,country,city,study_level,field_of_study,skills,interests,preferred_categories
+u1,Pakistan,Lahore,Masters,Data Science,python;sql;power bi,scholarships;remote jobs;disaster safety,job;scholarship;disaster
+u2,Pakistan,Karachi,Bachelors,Computer Science,python;flutter;git,internships;mobile development,job;learning

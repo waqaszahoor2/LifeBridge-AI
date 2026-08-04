@@ -1,0 +1,2 @@
+external_id,category,title,summary,source_name,source_url,image_url,published_at,expires_at,location,country_code,latitude,longitude,tags,severity,verification_status,source_reliability,funding_type,study_level,employment_type,salary_text,eligibility
+official-source-unique-id,scholarship,Example official scholarship,Replace with the verified summary,Official Provider,https://provider.example/opportunity,,2026-08-04T10:00:00Z,2026-10-01T23:59:59Z,Global,,,,scholarship;data-science,low,verified,0.95,Fully funded,Masters,,,Review official eligibility rules
