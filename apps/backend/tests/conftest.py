@@ -16,10 +16,16 @@ from app.main import app
 def cleanup_database():
     path = Path("test_lifebridge.db")
     if path.exists():
-        path.unlink()
+        try:
+            path.unlink()
+        except PermissionError:
+            pass
     yield
     if path.exists():
-        path.unlink()
+        try:
+            path.unlink()
+        except PermissionError:
+            pass
 
 
 @pytest.fixture

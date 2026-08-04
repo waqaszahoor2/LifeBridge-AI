@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FeedItem } from "@/lib/types";
 import { RelativeTime } from "./RelativeTime";
 import { SourceBadge } from "./SourceBadge";
+import { reportFeedItem } from "@/lib/api";
 
 const categoryIcons: Record<string, string> = {
   job: "💼",
@@ -21,12 +22,14 @@ export function FeedCard({
   reasons,
   isSavedInitial = false,
   onToggleSave,
+  onHide,
 }: {
   item: FeedItem;
   matchScore?: number;
   reasons?: string[];
   isSavedInitial?: boolean;
   onToggleSave?: (item: FeedItem, saved: boolean) => void;
+  onHide?: (item: FeedItem) => void;
 }) {
   const [isSaved, setIsSaved] = useState<boolean>(isSavedInitial);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
@@ -36,6 +39,8 @@ export function FeedCard({
   const published = new Date(item.published_at);
   const collected = new Date(item.collected_at);
   const expires = item.expires_at ? new Date(item.expires_at) : null;
+  const effectiveScore = typeof matchScore === "number" ? matchScore : item.match_score;
+  const effectiveReason = item.recommendation_reason || (reasons && reasons.length > 0 ? reasons[0] : null);
 
   function triggerToast(msg: string) {
     setToastMessage(msg);
@@ -72,12 +77,28 @@ export function FeedCard({
     }
   }
 
-  function handleReport() {
+  async function handleReport() {
+    await reportFeedItem(item.id);
     triggerToast("Report submitted to LifeBridge Trust & Safety Unit.");
+  }
+
+  function handleHide() {
+    if (onHide) {
+      onHide(item);
+    }
+    triggerToast("Post hidden from your feed");
   }
 
   const displayImage: string | undefined =
     typeof item.image_url === "string" && item.image_url.length > 0 ? item.image_url : undefined;
+
+  const formattedPubDate = published.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <>
@@ -96,9 +117,9 @@ export function FeedCard({
             <div className="feed-card-meta-row">
               <span className="category-label">{item.category.toUpperCase()}</span>
               <SourceBadge status={item.verification_status} />
-              {typeof matchScore === "number" && (
+              {typeof effectiveScore === "number" && (
                 <span className="match-badge">
-                  🎯 {Math.round(matchScore * 100)}% match
+                  🎯 {Math.round(effectiveScore * 100)}% match
                 </span>
               )}
             </div>
@@ -118,13 +139,12 @@ export function FeedCard({
 
         <p className="feed-summary">{item.summary}</p>
 
-        {reasons && reasons.length > 0 && (
+        {effectiveReason && (
           <div className="reasons-box">
             <strong>Why recommended for you:</strong>
             <ul className="reason-list">
-              {reasons.map((reason) => (
-                <li key={reason}>✓ {reason}</li>
-              ))}
+              <li>✓ {effectiveReason}</li>
+              {reasons && reasons.slice(1).map((r) => <li key={r}>✓ {r}</li>)}
             </ul>
           </div>
         )}
@@ -138,11 +158,8 @@ export function FeedCard({
         <div className="timestamps-grid">
           <div>
             <span>Published:</span>{" "}
-            <time dateTime={item.published_at}>{published.toLocaleDateString()}</time>
-          </div>
-          <div>
-            <span>Added to LifeBridge:</span>{" "}
-            <time dateTime={item.collected_at}>{collected.toLocaleDateString()}</time>
+            <time dateTime={item.published_at}>{formattedPubDate}</time>
+            {" "}(<RelativeTime value={item.published_at} />)
           </div>
           <div>
             <span>Last checked:</span>{" "}
@@ -196,6 +213,14 @@ export function FeedCard({
               aria-label={`Set reminder for ${item.title}`}
             >
               ⏰ Reminder
+            </button>
+            <button
+              type="button"
+              className="action-btn hide-btn"
+              onClick={handleHide}
+              aria-label={`Hide post ${item.title}`}
+            >
+              🚫 Hide
             </button>
             <button
               type="button"

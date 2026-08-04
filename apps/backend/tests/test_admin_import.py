@@ -1,10 +1,15 @@
+from app.core.config import get_settings
+
+settings = get_settings()
+
+
 def test_admin_csv_import(client):
     csv_body = """external_id,category,title,summary,source_name,source_url,image_url,published_at,expires_at,location,country_code,latitude,longitude,tags,severity,verification_status,source_reliability,funding_type,study_level,employment_type,salary_text,eligibility
 verified-scholarship-1,scholarship,Verified test scholarship,Official test record for import validation,Official Provider,https://example.org/program,,2026-08-04T10:00:00Z,2026-09-30T23:59:59Z,Global,,,,data-science;funding,low,verified,0.95,Fully funded,Masters,,,Published eligibility applies
 """
     response = client.post(
         "/api/v1/admin/feed-items/import-csv",
-        headers={"X-Admin-Key": "development-admin-key"},
+        headers={"X-Admin-Key": settings.admin_api_key},
         files={"file": ("feed.csv", csv_body, "text/csv")},
     )
     assert response.status_code == 200, response.text

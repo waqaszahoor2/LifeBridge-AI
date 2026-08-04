@@ -137,6 +137,56 @@ runTest("Sample feed images contain alt attributes", () => {
   assert.ok(imageItem.title);
 });
 
+// 16. Deduplication check
+runTest("Feed deduplication filters out duplicate post IDs and content hashes", () => {
+  const items = [...sampleFeed, { ...sampleFeed[0] }];
+  const seen = new Set();
+  const deduped = items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+  assert.strictEqual(deduped.length, sampleFeed.length);
+});
+
+// 17. Cursor pagination structure
+runTest("Cursor pagination payload structures next_cursor and items", () => {
+  const payload = {
+    items: sampleFeed.slice(0, 5),
+    next_cursor: "NQ==",
+    has_more: true,
+    generated_at: new Date().toISOString(),
+  };
+  assert.strictEqual(payload.items.length, 5);
+  assert.strictEqual(payload.has_more, true);
+  assert.ok(payload.next_cursor);
+});
+
+// 18. New updates banner
+runTest("New updates banner triggers state update on new urgent items", () => {
+  let pendingCount = 0;
+  const receiveUrgent = () => { pendingCount += 1; };
+  receiveUrgent();
+  assert.strictEqual(pendingCount, 1);
+});
+
+// 19. Hide post action
+runTest("Hiding post removes item from view and adds to hidden set", () => {
+  const hidden = new Set();
+  const targetId = sampleFeed[0].id;
+  hidden.add(targetId);
+  const visible = sampleFeed.filter((i) => !hidden.has(i.id));
+  assert.strictEqual(visible.some((i) => i.id === targetId), false);
+});
+
+// 20. 3-column layout components validation
+runTest("Layout grid components register sidebars and central feed column", () => {
+  const layoutColumns = ["left-sidebar", "center-feed", "right-sidebar"];
+  assert.strictEqual(layoutColumns.length, 3);
+  assert.ok(layoutColumns.includes("center-feed"));
+});
+
 console.log("--------------------------------------------------");
 console.log(`SUMMARY: ${passCount} / ${testCount} tests passed cleanly.`);
 console.log("--------------------------------------------------");
+

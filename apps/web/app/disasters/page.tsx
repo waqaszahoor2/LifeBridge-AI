@@ -11,6 +11,6 @@ import type { FeedItem } from "@/lib/types";
 export default function DisastersPage() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { fetchFeed().then(({items}) => { setItems(items.filter(i => ["disaster","weather","safety"].includes(i.category))); setLoading(false); }); }, []);
+  useEffect(() => { fetchFeed().then(({items}) => { setItems(items.filter((i: FeedItem) => ["disaster","weather","safety"].includes(i.category))); setLoading(false); }); }, []);
   return <AppShell><TopBar title="DisasterLink"/><PageIntro title="Risk and safety updates" description="Urgent alerts are sorted by severity and recency. Always verify critical instructions with local authorities."/><section className="feed-list page-list">{loading ? <LoadingSkeleton/> : items.map(item => <FeedCard key={item.external_id} item={item}/>)}</section></AppShell>;
 }

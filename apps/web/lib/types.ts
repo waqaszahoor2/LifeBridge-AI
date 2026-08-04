@@ -4,6 +4,9 @@ export type ThemeMode = "system" | "light" | "dark";
 export interface FeedItem {
   id: number;
   external_id: string;
+  source_external_id?: string;
+  canonical_url?: string | null;
+  content_hash?: string | null;
   category: FeedCategory;
   title: string;
   summary: string;
@@ -28,6 +31,16 @@ export interface FeedItem {
   employment_type?: string;
   salary_text?: string;
   eligibility?: string;
+  recommendation_reason?: string | null;
+  match_score?: number | null;
+}
+
+export interface CursorPaginatedResponse {
+  items: FeedItem[];
+  next_cursor: string | null;
+  has_more: boolean;
+  generated_at: string;
+  latest_item_at?: string | null;
 }
 
 export interface Recommendation {

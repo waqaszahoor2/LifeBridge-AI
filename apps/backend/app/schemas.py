@@ -11,6 +11,9 @@ class FeedItemOut(BaseModel):
 
     id: int
     external_id: str
+    source_external_id: str = ""
+    canonical_url: str | None = None
+    content_hash: str | None = None
     category: str
     title: str
     summary: str
@@ -35,6 +38,17 @@ class FeedItemOut(BaseModel):
     employment_type: str = ""
     salary_text: str = ""
     eligibility: str = ""
+    recommendation_reason: str | None = None
+    match_score: float | None = None
+
+
+
+class CursorPaginatedFeedOut(BaseModel):
+    items: list[FeedItemOut]
+    next_cursor: str | None = None
+    has_more: bool
+    generated_at: datetime
+    latest_item_at: datetime | None = None
 
 
 class FeedItemCreate(BaseModel):

@@ -16,7 +16,7 @@ export default function ScholarshipsPage() {
   useEffect(() => {
     async function load() {
       const { items, live: isLive } = await fetchFeed(undefined, "scholarship");
-      setScholarships(items.filter((i) => i.category === "scholarship"));
+      setScholarships(items.filter((i: FeedItem) => i.category === "scholarship"));
       setLive(isLive);
       setLoading(false);
     }

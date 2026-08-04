@@ -20,6 +20,10 @@ class FeedItem(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     external_id: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    source_external_id: Mapped[str] = mapped_column(String(180), default="", index=True)
+    canonical_url: Mapped[str | None] = mapped_column(String(500), nullable=True, index=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    title_normalized: Mapped[str] = mapped_column(String(250), default="", index=True)
     category: Mapped[str] = mapped_column(String(30), index=True)
     title: Mapped[str] = mapped_column(String(250))
     summary: Mapped[str] = mapped_column(Text)
@@ -27,12 +31,12 @@ class FeedItem(Base):
     source_url: Mapped[str] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
     last_checked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     location: Mapped[str] = mapped_column(String(180), default="Global", index=True)
-    country_code: Mapped[str] = mapped_column(String(8), default="")
+    country_code: Mapped[str] = mapped_column(String(8), default="", index=True)
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     tags: Mapped[str] = mapped_column(Text, default="")
@@ -46,6 +50,7 @@ class FeedItem(Base):
     eligibility: Mapped[str] = mapped_column(Text, default="")
     raw_json: Mapped[str] = mapped_column(Text, default="{}")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
 
 
 class User(Base, TimestampMixin):

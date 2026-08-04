@@ -30,6 +30,11 @@ export function readLocalProfile(): LocalRecommendationProfile {
   }
 }
 
+export const getStoredProfile = readLocalProfile;
+
 export function saveLocalProfile(profile: LocalRecommendationProfile): void {
   window.localStorage.setItem(key, JSON.stringify(profile));
 }
+
+export const saveStoredProfile = saveLocalProfile;
+

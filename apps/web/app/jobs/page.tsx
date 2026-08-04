@@ -16,7 +16,7 @@ export default function JobsPage() {
   useEffect(() => {
     async function load() {
       const { items, live: isLive } = await fetchFeed(undefined, "job");
-      setJobs(items.filter((i) => i.category === "job"));
+      setJobs(items.filter((i: FeedItem) => i.category === "job"));
       setLive(isLive);
       setLoading(false);
     }

@@ -16,7 +16,7 @@ export default function WeatherPage() {
   useEffect(() => {
     async function load() {
       const { items, live: isLive } = await fetchFeed(undefined, "weather");
-      setWeatherItems(items.filter((i) => i.category === "weather"));
+      setWeatherItems(items.filter((i: FeedItem) => i.category === "weather"));
       setLive(isLive);
       setLoading(false);
     }

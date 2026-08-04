@@ -4,8 +4,11 @@ import type { FeedCategory } from "@/lib/types";
 
 export type SortMode = "urgent" | "match" | "newest";
 
-const categories: Array<{ key: "all" | FeedCategory; label: string; icon: string }> = [
+export type CategoryKey = "all" | "latest" | FeedCategory;
+
+const categories: Array<{ key: CategoryKey; label: string; icon: string }> = [
   { key: "all", label: "For You", icon: "✨" },
+  { key: "latest", label: "Latest", icon: "🕒" },
   { key: "job", label: "Jobs", icon: "💼" },
   { key: "scholarship", label: "Scholarships", icon: "🎓" },
   { key: "disaster", label: "Disasters", icon: "⚠" },
@@ -25,10 +28,10 @@ export function FeedFilters({
   onRefresh,
   isRefreshing,
 }: {
-  category: "all" | FeedCategory;
+  category: CategoryKey;
   search: string;
   sortMode: SortMode;
-  onCategory: (category: "all" | FeedCategory) => void;
+  onCategory: (category: CategoryKey) => void;
   onSearch: (value: string) => void;
   onSort: (mode: SortMode) => void;
   onRefresh?: () => void;
