@@ -5,16 +5,34 @@ import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  pageTitle,
+  pageSubtitle,
+  onRefresh,
+  isRefreshing,
+}: {
+  children: ReactNode;
+  pageTitle?: string;
+  pageSubtitle?: string;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+}) {
   return (
-    <div className="app-shell-wrapper">
-      <Header />
-      <div className="app-shell">
-        <Sidebar />
-        <div className="main-content">{children}</div>
+    <div className="lb-app-shell-root">
+      <Sidebar />
+      <div className="lb-app-main-column">
+        <Header
+          pageTitle={pageTitle}
+          pageSubtitle={pageSubtitle}
+          onRefresh={onRefresh}
+          isRefreshing={isRefreshing}
+        />
+        <main className="lb-app-content-body">{children}</main>
       </div>
       <MobileNav />
     </div>
   );
 }
+
 

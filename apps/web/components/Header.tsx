@@ -4,9 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { Icon } from "./ui/Icon";
 import type { ThemeMode } from "@/lib/types";
 
-export function Header() {
+export function Header({
+  pageTitle = "For You",
+  pageSubtitle = "Personalized updates and insights that matter to you.",
+  onRefresh,
+  isRefreshing,
+}: {
+  pageTitle?: string;
+  pageSubtitle?: string;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
+}) {
   const pathname = usePathname();
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window !== "undefined") {
@@ -14,8 +25,7 @@ export function Header() {
     }
     return "system";
   });
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [unreadCount, setUnreadCount] = useState<number>(2);
+  const [unreadCount, setUnreadCount] = useState<number>(3);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
 
   useEffect(() => {
@@ -28,108 +38,85 @@ export function Header() {
     localStorage.setItem("lifebridge-theme", theme);
   }, [theme]);
 
-  const navLinks = [
-    { href: "/", label: "Home", icon: "🏠" },
-    { href: "/for-you", label: "For You", icon: "✨" },
-    { href: "/jobs", label: "Jobs", icon: "💼" },
-    { href: "/scholarships", label: "Scholarships", icon: "🎓" },
-    { href: "/disasters", label: "Disasters", icon: "🚨" },
-    { href: "/services", label: "Services", icon: "✚" },
-  ];
+  // Determine current page title if not passed explicitly
+  const displayTitle = pageTitle || getTitleFromPath(pathname);
 
   return (
-    <header className="lb-linkedin-header">
-      <div className="header-inner container">
-        {/* Brand Logo */}
-        <Link href="/for-you" className="brand-logo" aria-label="LifeBridge AI Home">
-          <div className="logo-badge">LB</div>
-          <div className="brand-text">
-            <span className="brand-name">LifeBridge AI</span>
-            <span className="brand-tagline">Personalised Opportunity Feed</span>
+    <header className="lb-top-header">
+      <div className="header-container">
+        {/* Left Title & Subtitle */}
+        <div className="header-title-block">
+          <div className="header-title-row">
+            <Icon name="sparkles" size={20} className="title-icon text-teal" />
+            <h1 className="header-page-title">{displayTitle}</h1>
           </div>
-        </Link>
-
-        {/* Global Search Bar */}
-        <div className="global-search-container">
-          <span className="search-icon" aria-hidden="true">🔍</span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search opportunities, skills, alerts..."
-            aria-label="Global search"
-            className="global-search-input"
-          />
+          <p className="header-page-subtitle">{pageSubtitle}</p>
         </div>
 
-        {/* Main Desktop Navigation */}
-        <nav className="header-nav-links" aria-label="Primary navigation">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`nav-item ${isActive ? "active" : ""}`}
-              >
-                <span className="nav-icon" aria-hidden="true">{link.icon}</span>
-                <span className="nav-label">{link.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Right Header Actions */}
+        <div className="header-right-actions">
+          {/* Refresh Action Button */}
+          {onRefresh && (
+            <button
+              type="button"
+              className={`header-btn refresh-btn ${isRefreshing ? "spin" : ""}`}
+              onClick={onRefresh}
+              disabled={isRefreshing}
+            >
+              <Icon name="refresh" size={16} />
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
+          )}
 
-        {/* Controls & User Profile */}
-        <div className="header-actions">
           {/* Notifications Button */}
           <button
             type="button"
-            className="icon-action-btn notif-btn"
+            className="header-btn icon-btn notif-btn"
             aria-label={`${unreadCount} notifications`}
             onClick={() => setUnreadCount(0)}
             title="Notifications"
           >
-            <span className="action-icon">🔔</span>
-            {unreadCount > 0 && <span className="unread-pill">{unreadCount}</span>}
+            <Icon name="bell" size={18} />
+            {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
           </button>
 
-          {/* Theme Selector */}
+          {/* Theme Toggle Selector */}
           <ThemeToggle mode={theme} onChange={setTheme} />
 
-          {/* User Profile Menu */}
-          <div className="profile-menu-wrapper">
+          {/* User Profile Greeting & Avatar Dropdown */}
+          <div className="profile-greeting-wrapper">
             <button
               type="button"
-              className="profile-avatar-btn"
+              className="user-avatar-btn"
               onClick={() => setShowProfileMenu((prev) => !prev)}
               aria-expanded={showProfileMenu}
               aria-label="User Account Options"
             >
-              <span className="avatar-text">WZ</span>
+              <span className="greeting-text">Hello, Aarav</span>
+              <div className="avatar-img-placeholder">
+                <Icon name="user" size={18} />
+              </div>
             </button>
 
             {showProfileMenu && (
-              <div className="profile-dropdown-card" role="menu">
-                <div className="user-info-header">
-                  <div className="user-name">Waqas Zahoor</div>
-                  <div className="user-role">Data Scientist & AI Researcher</div>
-                  <div className="user-loc">📍 Pakistan 🇵🇰 · Masters</div>
+              <div className="profile-menu-dropdown" role="menu">
+                <div className="dropdown-user-info">
+                  <div className="dropdown-user-name">Aarav Sharma</div>
+                  <div className="dropdown-user-email">aarav.sharma@lifebridge.ai</div>
+                  <div className="dropdown-user-role">Student & Civic Safety Volunteer</div>
                 </div>
-                <hr className="menu-divider" />
-                <Link href="/profile" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  👤 My Profile & Preferences
+                <hr className="dropdown-divider" />
+                <Link href="/profile" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
+                  <Icon name="user" size={16} /> My Profile & Preferences
                 </Link>
-                <Link href="/saved" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  🔖 Saved Opportunities
+                <Link href="/saved" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
+                  <Icon name="bookmark" size={16} /> Saved Opportunities
                 </Link>
-                <Link href="/skills" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  ⚡ Skills & Match Index
+                <Link href="/skills" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
+                  <Icon name="book" size={16} /> SkillBridge Intelligence
                 </Link>
-                <Link href="/accessibility" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  ♿ Accessibility Controls
-                </Link>
-                <Link href="/settings" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  ⚙️ Notification Settings
+                <Link href="/settings" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
+                  <Icon name="settings" size={16} /> Settings
                 </Link>
               </div>
             )}
@@ -139,3 +126,42 @@ export function Header() {
     </header>
   );
 }
+
+function getTitleFromPath(pathname: string): string {
+  switch (pathname) {
+    case "/for-you":
+    case "/":
+      return "For You";
+    case "/jobs":
+      return "Jobs & Careers";
+    case "/scholarships":
+      return "Scholarships & Funding";
+    case "/disasters":
+      return "DisasterLink Safety";
+    case "/weather":
+      return "Weather Advisories";
+    case "/services":
+      return "ServiceLink Finder";
+    case "/opportunities":
+      return "Opportunities Explorer";
+    case "/skills":
+      return "SkillBridge CV Intelligence";
+    case "/decision-graph":
+      return "Personal Decision Graph";
+    case "/trust-scanner":
+      return "VerifyLink Trust Scanner";
+    case "/accessibility":
+      return "AccessLink Mobility";
+    case "/profile":
+      return "Profile & Preferences";
+    case "/saved":
+      return "Saved Items";
+    case "/about":
+      return "About LifeBridge AI";
+    case "/settings":
+      return "Settings";
+    default:
+      return "LifeBridge AI";
+  }
+}
+

@@ -10,6 +10,8 @@ import { RightSidebar } from "@/components/RightSidebar";
 import { fetchForYouFeed, fetchRecommendations, triggerFeedRefresh } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
 import type { FeedItem } from "@/lib/types";
+import { Icon } from "@/components/ui/Icon";
+
 
 export default function ForYouPage() {
   return (
@@ -306,127 +308,156 @@ function ForYouFeedContent() {
   const sortedItems = getFilteredAndSortedItems();
 
   return (
-    <AppShell>
-      <main className="linkedin-feed-layout container">
-        {/* Left Sidebar (Sticky) */}
-        <LeftSidebar />
-
-        {/* Central Feed Column */}
-        <section className="linkedin-center-feed" aria-label="Main Feed">
-          {/* Toolbar Header Card */}
-          <div className="feed-header-card">
-            <div className="feed-header-main">
-              <div>
-                <h1 className="feed-page-title">For You Feed</h1>
-                <p className="feed-page-subtitle">
-                  Personalised AI opportunities, scholarships, safety alerts & verified career insights
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn-refresh-feed"
-                onClick={handleManualRefresh}
-                title="Refresh feed sources"
-              >
-                🔄 Refresh Feed
-              </button>
+    <AppShell
+      pageTitle="For You"
+      pageSubtitle="Personalized updates and insights that matter to you."
+      onRefresh={handleManualRefresh}
+      isRefreshing={loading}
+    >
+      <div className="lb-for-you-layout">
+        {/* Top Urgent Emergency Alert Banner (from design-reference.png) */}
+        <div className="lb-urgent-alert-banner" role="alert">
+          <div className="urgent-banner-left">
+            <div className="urgent-icon-circle">
+              <Icon name="alert" size={20} className="text-red" />
             </div>
+            <div className="urgent-text-content">
+              <div className="urgent-header-row">
+                <span className="urgent-label-red">URGENT FLOOD ALERT</span>
+                <span className="urgent-badge-high">High Risk</span>
+              </div>
+              <p className="urgent-message-body">
+                Heavy rainfall causing severe flooding in parts of Assam and Bihar. Stay indoors if possible. Follow local instructions and stay safe.
+              </p>
+              <div className="urgent-footer-row">
+                <a href="/disasters" className="urgent-action-link">
+                  View Affected Areas &gt;
+                </a>
+                <span className="urgent-source-meta">Source: IMD • 20 mins ago</span>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="urgent-close-btn"
+            onClick={(e) => {
+              (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+            }}
+            aria-label="Dismiss Alert"
+          >
+            ✕
+          </button>
+        </div>
 
+        {/* Category Filters Chips */}
+        <FeedFilters
+          category={selectedCategory}
+          search={searchTerm}
+          sortMode={sortMode}
+          onCategory={handleCategorySelect}
+          onSearch={setSearchTerm}
+          onSort={setSortMode}
+        />
+
+        {/* 2-Column Main Feed Content (Central Feed + Right Sidebar) */}
+        <div className="lb-feed-main-grid">
+          {/* Central Feed Column */}
+          <section className="lb-center-feed-column" aria-label="Main Feed">
+            {/* New Updates Sticky Banner */}
+            {newUpdatesCount > 0 && (
+              <div className="new-updates-banner" role="alert">
+                <Icon name="bell" size={16} />
+                <span>{newUpdatesCount} new emergency update available</span>
+                <button
+                  type="button"
+                  className="btn-show-updates"
+                  onClick={handleShowNewUpdates}
+                >
+                  Show new updates ↑
+                </button>
+              </div>
+            )}
+
+            {/* Offline Notification */}
             {isOffline && (
               <div className="offline-notice-banner" role="status">
-                📡 Connected to offline cache mode — displaying verified opportunities.
+                📡 Connected to offline verified cache mode.
               </div>
             )}
 
-            {/* Category Filter Chips & Search Bar */}
-            <FeedFilters
-              category={selectedCategory}
-              search={searchTerm}
-              sortMode={sortMode}
-              onCategory={handleCategorySelect}
-              onSearch={setSearchTerm}
-              onSort={setSortMode}
-              onRefresh={handleManualRefresh}
-            />
-          </div>
+            {/* Feed Cards Container */}
+            {loading ? (
+              <div className="feed-skeletons-list">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="lb-feed-card skeleton-card">
+                    <div className="skeleton-line title-skel" />
+                    <div className="skeleton-line text-skel" />
+                    <div className="skeleton-line short-skel" />
+                  </div>
+                ))}
+              </div>
+            ) : sortedItems.length === 0 ? (
+              <div className="empty-feed-card">
+                <h3>No matching updates found</h3>
+                <p>Try adjusting your category filter or search term.</p>
+                <button
+                  type="button"
+                  className="reset-filter-btn"
+                  onClick={() => {
+                    setSelectedCategory("all");
+                    setSearchTerm("");
+                  }}
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <div className="feed-cards-list">
+                {sortedItems.map((item) => (
+                  <FeedCard
+                    key={item.id}
+                    item={item}
+                    matchScore={recommendations[item.id]?.score}
+                    reasons={recommendations[item.id]?.reasons}
+                    isSavedInitial={savedIds.has(item.id)}
+                    onToggleSave={handleToggleSaveItem}
+                    onHide={handleHideItem}
+                  />
+                ))}
+              </div>
+            )}
 
-          {/* New Updates Banner */}
-          {newUpdatesCount > 0 && (
-            <div className="new-updates-banner" role="alert">
-              <span>🔔 {newUpdatesCount} new emergency update available</span>
-              <button
-                type="button"
-                className="btn-show-updates"
-                onClick={handleShowNewUpdates}
-              >
-                Show new updates ↑
-              </button>
-            </div>
-          )}
-
-          {/* Feed Content Loading / Skeletons / Cards */}
-          {loading ? (
-            <div className="feed-skeletons-list">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="feed-card skeleton-card">
-                  <div className="skeleton-line title-skel" />
-                  <div className="skeleton-line text-skel" />
-                  <div className="skeleton-line short-skel" />
+            {/* Infinite Scroll Sentinel & End of Feed Banner */}
+            <div ref={sentinelRef} className="infinite-scroll-sentinel">
+              {loadingMore && (
+                <div className="loading-more-spinner">
+                  <Icon name="refresh" size={16} className="spin" />
+                  <span>Loading more updates...</span>
                 </div>
-              ))}
+              )}
+              {!hasMore && !loading && sortedItems.length > 0 && (
+                <div className="end-of-feed-card">
+                  <div className="end-text">
+                    <span className="infinity-symbol">♾</span>
+                    <span>You&apos;ve reached the end for now. New updates will appear automatically.</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="end-refresh-btn"
+                    onClick={handleManualRefresh}
+                  >
+                    <Icon name="refresh" size={14} /> Refresh
+                  </button>
+                </div>
+              )}
             </div>
-          ) : sortedItems.length === 0 ? (
-            <div className="empty-feed-card">
-              <h3>No matching updates found</h3>
-              <p>Try adjusting your category filter or search query.</p>
-              <button
-                type="button"
-                className="reset-filter-btn"
-                onClick={() => {
-                  setSelectedCategory("all");
-                  setSearchTerm("");
-                }}
-              >
-                Reset Filters
-              </button>
-            </div>
-          ) : (
-            <div className="feed-cards-container">
-              {sortedItems.map((item) => (
-                <FeedCard
-                  key={item.id}
-                  item={item}
-                  matchScore={recommendations[item.id]?.score}
-                  reasons={recommendations[item.id]?.reasons}
-                  isSavedInitial={savedIds.has(item.id)}
-                  onToggleSave={handleToggleSaveItem}
-                  onHide={handleHideItem}
-                />
-              ))}
-            </div>
-          )}
+          </section>
 
-          {/* Infinite Scroll Sentinel & Footer Status */}
-          <div ref={sentinelRef} className="infinite-scroll-sentinel">
-            {loadingMore && (
-              <div className="loading-more-spinner">
-                <span>🔄 Loading more updates...</span>
-              </div>
-            )}
-            {!hasMore && !loading && sortedItems.length > 0 && (
-              <div className="end-of-feed-badge">
-                ✓ You&apos;re all caught up on the latest verified updates.
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Right Sidebar (Sticky) */}
-        <RightSidebar
-          lastSyncTime={lastSyncTime}
-          onRefreshTrigger={handleManualRefresh}
-        />
-      </main>
+          {/* Right Sidebar Widgets */}
+          <RightSidebar />
+        </div>
+      </div>
     </AppShell>
   );
 }
+

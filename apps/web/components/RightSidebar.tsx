@@ -1,127 +1,155 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { RelativeTime } from "./RelativeTime";
+import { Icon } from "./ui/Icon";
 
-export function RightSidebar({
-  lastSyncTime,
-  onRefreshTrigger,
-}: {
-  lastSyncTime?: string;
-  onRefreshTrigger?: () => void;
-}) {
-  const [syncTime, setSyncTime] = useState<string>(
-    lastSyncTime || new Date().toISOString()
-  );
-
-  useEffect(() => {
-    if (lastSyncTime) setSyncTime(lastSyncTime);
-  }, [lastSyncTime]);
-
+export function RightSidebar() {
   return (
-    <aside className="linkedin-right-sidebar" aria-label="Urgent Updates & Insights">
-      {/* Sync Status Banner */}
-      <div className="sidebar-card sync-status-card">
-        <div className="sync-status-header">
-          <span className="live-pulse-dot" aria-hidden="true" />
-          <span className="sync-title">Live Intelligence Sync</span>
+    <aside className="lb-right-sidebar" aria-label="Contextual Widgets & Local Info">
+      {/* Widget 1: Weather Now */}
+      <div className="sidebar-card weather-widget-card">
+        <div className="card-header-row">
+          <h3 className="card-title-text">Weather Now</h3>
+          <span className="location-pin-text">
+            <Icon name="pin" size={13} /> Guwahati, Assam
+          </span>
         </div>
-        <p className="sync-timestamp-line">
-          Last verified: <RelativeTime value={syncTime} />
-        </p>
-        <button
-          type="button"
-          className="sync-refresh-btn"
-          onClick={onRefreshTrigger}
-        >
-          🔄 Refresh Sources Now
-        </button>
-      </div>
 
-      {/* Urgent Emergency Alert Widget */}
-      <div className="sidebar-card urgent-widget-card border-urgent">
-        <div className="widget-header">
-          <span className="widget-icon">🚨</span>
-          <h3>Urgent Safety Warnings</h3>
-        </div>
-        <div className="widget-body">
-          <div className="alert-item critical">
-            <span className="alert-badge">CRITICAL</span>
-            <h4>Flash Flood Emergency — Indus River Basin</h4>
-            <p className="alert-meta">Issued by Met Department · Sindh & Punjab</p>
+        <div className="weather-main-row">
+          <div className="temp-block">
+            <span className="current-temp">26°C</span>
+            <div className="temp-sub">
+              <span className="weather-cond">Cloudy</span>
+              <span className="feels-like">Feels like 28°C</span>
+            </div>
+          </div>
+          <div className="weather-icon-illustration">
+            <Icon name="cloud" size={44} className="text-teal" />
           </div>
         </div>
-        <Link href="/disasters" className="widget-footer-link">
-          View all 3 active alerts →
+
+        <div className="weather-metrics-row">
+          <div className="metric-item">
+            <Icon name="droplet" size={14} />
+            <span>72%</span>
+            <small>Humidity</small>
+          </div>
+          <div className="metric-item">
+            <Icon name="cloud" size={14} />
+            <span>8 km/h</span>
+            <small>Wind</small>
+          </div>
+          <div className="metric-item">
+            <Icon name="alert" size={14} />
+            <span>1012 hPa</span>
+            <small>Pressure</small>
+          </div>
+        </div>
+
+        <div className="forecast-mini-row">
+          <div className="forecast-day">
+            <span>Sat</span>
+            <Icon name="cloud" size={16} />
+            <strong>31° / 25°</strong>
+          </div>
+          <div className="forecast-day">
+            <span>Sun</span>
+            <Icon name="sun" size={16} />
+            <strong>30° / 25°</strong>
+          </div>
+          <div className="forecast-day">
+            <span>Mon</span>
+            <Icon name="cloud" size={16} />
+            <strong>29° / 25°</strong>
+          </div>
+          <div className="forecast-day">
+            <span>Tue</span>
+            <Icon name="cloud" size={16} />
+            <strong>31° / 26°</strong>
+          </div>
+        </div>
+
+        <Link href="/weather" className="card-footer-link">
+          <span>View full forecast</span>
+          <Icon name="chevron-right" size={14} />
         </Link>
       </div>
 
-      {/* Approaching Scholarship Deadlines Widget */}
-      <div className="sidebar-card widget-card">
-        <div className="widget-header">
-          <span className="widget-icon">⏳</span>
-          <h3>Upcoming Deadlines</h3>
+      {/* Widget 2: Quick Services */}
+      <div className="sidebar-card quick-services-card">
+        <div className="card-header-row">
+          <h3 className="card-title-text">Quick Services</h3>
+          <Link href="/services" className="header-link-sm">
+            View All
+          </Link>
         </div>
-        <ul className="deadline-list">
-          <li className="deadline-item">
-            <div className="deadline-dates">
-              <span className="month">AUG</span>
-              <span className="day">15</span>
+
+        <div className="services-icon-grid">
+          <Link href="/services?type=telemedicine" className="service-grid-tile">
+            <div className="service-tile-icon bg-info">
+              <Icon name="hospital" size={20} />
             </div>
-            <div className="deadline-info">
-              <h4>HEC Overseas PhD Scholarship 2026</h4>
-              <p>Fully Funded · 11 days remaining</p>
+            <span className="service-tile-label">Telemedicine</span>
+          </Link>
+          <Link href="/services?type=ambulance" className="service-grid-tile">
+            <div className="service-tile-icon bg-danger">
+              <Icon name="ambulance" size={20} />
             </div>
-          </li>
-          <li className="deadline-item">
-            <div className="deadline-dates">
-              <span className="month">SEP</span>
-              <span className="day">01</span>
+            <span className="service-tile-label">Ambulance</span>
+          </Link>
+          <Link href="/services?type=blood" className="service-grid-tile">
+            <div className="service-tile-icon bg-red">
+              <Icon name="droplet" size={20} />
             </div>
-            <div className="deadline-info">
-              <h4>Fulbright Master&apos;s Fellowship</h4>
-              <p>Full Tuition + Stipend · 28 days remaining</p>
+            <span className="service-tile-label">Blood Donor</span>
+          </Link>
+          <Link href="/services?type=shelter" className="service-grid-tile">
+            <div className="service-tile-icon bg-teal">
+              <Icon name="services" size={20} />
             </div>
-          </li>
-        </ul>
-        <Link href="/scholarships" className="widget-footer-link">
-          Explore scholarships →
-        </Link>
+            <span className="service-tile-label">Nearby Shelter</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Trending Skills Widget */}
-      <div className="sidebar-card widget-card">
-        <div className="widget-header">
-          <span className="widget-icon">📈</span>
-          <h3>Trending Skills in Demand</h3>
+      {/* Widget 3: Stay Safe */}
+      <div className="sidebar-card stay-safe-card">
+        <div className="safe-card-body">
+          <div className="safe-text-block">
+            <h3 className="safe-card-title">Stay Safe</h3>
+            <p className="safe-card-desc">
+              Share your location with trusted contacts in emergencies.
+            </p>
+            <button
+              type="button"
+              className="btn-share-location"
+              onClick={() => alert("Location shared with your designated emergency contacts.")}
+            >
+              Share Location
+            </button>
+          </div>
+          <div className="safe-card-illustration">
+            <Icon name="shield" size={48} className="text-teal" />
+          </div>
         </div>
-        <div className="tag-cloud">
-          <span className="trending-tag">#Python (High)</span>
-          <span className="trending-tag">#DataScience</span>
-          <span className="trending-tag">#MachineLearning</span>
-          <span className="trending-tag">#CloudComputing</span>
-          <span className="trending-tag">#DisasterResponse</span>
-          <span className="trending-tag">#GISMapping</span>
-        </div>
-        <Link href="/skills" className="widget-footer-link">
-          Check your skill match index →
-        </Link>
       </div>
 
-      {/* Verified Data Sources Widget */}
-      <div className="sidebar-card widget-card">
-        <div className="widget-header">
-          <span className="widget-icon">🛡️</span>
-          <h3>Verified Source Registry</h3>
+      {/* Widget 4: Daily Tip */}
+      <div className="sidebar-card daily-tip-card">
+        <div className="tip-card-body">
+          <span className="tip-quote-mark">“</span>
+          <div className="tip-text-block">
+            <h3 className="tip-title">Daily Tip</h3>
+            <p className="tip-desc">
+              Stay informed, stay prepared, stay safe. Small actions save lives.
+            </p>
+          </div>
+          <div className="tip-illustration">
+            <Icon name="check" size={32} className="text-success" />
+          </div>
         </div>
-        <ul className="source-mini-list">
-          <li>✔ UNHCR Global Relief Network</li>
-          <li>✔ NASA EONET Climate Observatory</li>
-          <li>✔ HEC Pakistan Portal</li>
-          <li>✔ ReliefWeb International</li>
-        </ul>
       </div>
     </aside>
   );
 }
+

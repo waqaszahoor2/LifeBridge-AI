@@ -1,21 +1,21 @@
 "use client";
 
 import type { FeedCategory } from "@/lib/types";
+import { Icon, type IconName } from "./ui/Icon";
 
 export type SortMode = "urgent" | "match" | "newest";
-
 export type CategoryKey = "all" | "latest" | FeedCategory;
 
-const categories: Array<{ key: CategoryKey; label: string; icon: string }> = [
-  { key: "all", label: "For You", icon: "✨" },
-  { key: "latest", label: "Latest", icon: "🕒" },
-  { key: "job", label: "Jobs", icon: "💼" },
-  { key: "scholarship", label: "Scholarships", icon: "🎓" },
-  { key: "disaster", label: "Disasters", icon: "⚠" },
-  { key: "weather", label: "Weather", icon: "☁" },
-  { key: "service", label: "Services", icon: "✚" },
-  { key: "safety", label: "Safety", icon: "🛡" },
-  { key: "learning", label: "Learning", icon: "📖" },
+const categories: Array<{ key: CategoryKey; label: string; icon: IconName }> = [
+  { key: "all", label: "For You", icon: "sparkles" },
+  { key: "latest", label: "Latest", icon: "clock" },
+  { key: "job", label: "Jobs", icon: "briefcase" },
+  { key: "scholarship", label: "Scholarships", icon: "academic" },
+  { key: "disaster", label: "Disasters", icon: "alert" },
+  { key: "weather", label: "Weather", icon: "cloud" },
+  { key: "service", label: "Services", icon: "services" },
+  { key: "safety", label: "Safety", icon: "shield" },
+  { key: "learning", label: "Learning", icon: "book" },
 ];
 
 export function FeedFilters({
@@ -38,74 +38,63 @@ export function FeedFilters({
   isRefreshing?: boolean;
 }) {
   return (
-    <section className="feed-toolbar">
-      <div className="category-tabs" role="tablist" aria-label="Feed categories">
+    <section className="lb-feed-toolbar">
+      {/* Category Chips Bar */}
+      <div className="category-chips-scroll" role="tablist" aria-label="Feed Categories">
         {categories.map((entry) => (
           <button
             key={entry.key}
             type="button"
             role="tab"
             aria-selected={category === entry.key}
-            className={`tab-btn ${category === entry.key ? "active" : ""}`}
+            className={`chip-btn ${category === entry.key ? "active" : ""}`}
             onClick={() => onCategory(entry.key)}
           >
-            <span aria-hidden="true">{entry.icon}</span>
+            <Icon name={entry.icon} size={15} />
             <span>{entry.label}</span>
           </button>
         ))}
       </div>
 
-      <div className="feed-controls-row">
-        <div className="search-input-wrapper">
-          <span className="search-icon" aria-hidden="true">🔍</span>
+      {/* Controls Row */}
+      <div className="toolbar-controls-row">
+        <div className="search-field-wrap">
+          <Icon name="search" size={16} className="search-field-icon" />
           <input
             type="text"
             value={search}
-            onChange={(event) => onSearch(event.target.value)}
+            onChange={(e) => onSearch(e.target.value)}
             placeholder="Search jobs, scholarships, disasters, skills..."
-            aria-label="Search feed items"
-            className="search-field"
+            aria-label="Search feed"
+            className="search-field-input"
           />
           {search && (
             <button
               type="button"
               className="clear-search-btn"
               onClick={() => onSearch("")}
-              aria-label="Clear search text"
+              aria-label="Clear search"
             >
               ✕
             </button>
           )}
         </div>
 
-        <div className="filter-dropdowns">
-          <label htmlFor="sort-select" className="sr-only">Sort Order</label>
+        <div className="sort-dropdown-wrap">
+          <Icon name="filter" size={15} className="sort-icon" />
           <select
-            id="sort-select"
             value={sortMode}
             onChange={(e) => onSort(e.target.value as SortMode)}
-            className="sort-select"
-            aria-label="Sort feed"
+            className="sort-select-input"
+            aria-label="Sort Order"
           >
-            <option value="urgent">🚨 Urgent Alerts First</option>
-            <option value="match">🎯 Highest Recommendation Match</option>
-            <option value="newest">🕒 Newest Published Date</option>
+            <option value="urgent">Urgent Alerts First</option>
+            <option value="match">Highest Match Score</option>
+            <option value="newest">Newest Published</option>
           </select>
-
-          {onRefresh && (
-            <button
-              type="button"
-              className={`refresh-btn ${isRefreshing ? "spin" : ""}`}
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              aria-label="Refresh feed items"
-              title="Refresh latest updates"
-            >
-              🔄 Refresh
-            </button>
-          )}
         </div>
       </div>
     </section>
   );
 }
+
