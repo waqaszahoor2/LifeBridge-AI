@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
+
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, field_validator
 
@@ -234,3 +235,150 @@ class DecisionGraphResponse(BaseModel):
     edges: list[GraphEdge]
     top_items: list[RecommendationOut]
     explanation: str
+
+
+# ==========================================================================
+# AI SKILL MENTOR SCHEMAS
+# ==========================================================================
+
+class SkillGoalRequest(BaseModel):
+    raw_goal: str = Field(min_length=5, max_length=2000)
+    target_skill: str | None = Field(default=None, max_length=120)
+    current_level: Literal["Beginner", "Intermediate", "Advanced"] = "Beginner"
+    known_skills: list[str] = Field(default_factory=list, max_length=30)
+    career_goal: str = Field(default="", max_length=180)
+    hours_per_day: float = Field(default=1.0, ge=0.25, le=16.0)
+    days_per_week: int = Field(default=5, ge=1, le=7)
+    target_months: int = Field(default=6, ge=1, le=24)
+    learning_style: Literal["Videos", "Reading", "Practical Projects", "Exercises", "Mixed"] = "Mixed"
+    budget_preference: Literal["Free Only", "Mostly Free", "Paid Allowed"] = "Mostly Free"
+    country: str = Field(default="Global", max_length=100)
+
+
+class SkillProfileOut(BaseModel):
+    primary_skill: str
+    current_level: str
+    target_level: str
+    known_skills: list[str]
+    missing_prerequisites: list[str]
+    hours_per_week: float
+    target_months: int
+    career_goal: str
+    learning_style: str
+    free_resources_only: bool
+
+
+class RoadmapPhaseOut(BaseModel):
+    phase_number: int
+    title: str
+    objective: str
+    estimated_hours: int
+    topics: list[str]
+    tools: list[str]
+    ai_tools: list[str]
+    exercises: list[str]
+    project: str
+    checkpoint: str
+
+
+class RoadmapLessonOut(BaseModel):
+    id: str
+    phase_number: int
+    title: str
+    duration_minutes: int
+    is_completed: bool = False
+    topics: list[str] = Field(default_factory=list)
+    ai_usage_note: str = ""
+
+
+class RoadmapProjectOut(BaseModel):
+    id: str
+    phase_number: int
+    title: str
+    problem_statement: str
+    objective: str
+    skills_practised: list[str]
+    tools: list[str]
+    ai_integration: str
+    dataset_requirements: str
+    difficulty: Literal["Beginner", "Intermediate", "Advanced", "Capstone"]
+    estimated_hours: int
+    is_capstone: bool = False
+    is_completed: bool = False
+    github_url: str | None = None
+    demo_url: str | None = None
+
+
+class RoadmapAssessmentOut(BaseModel):
+    id: str
+    phase_number: int
+    title: str
+    type: Literal["multiple_choice", "practical_task", "debugging_task", "mini_project"]
+    questions: list[dict[str, str | list[str]]] = Field(default_factory=list)
+    passing_score: int = 70
+    is_completed: bool = False
+    score: int | None = None
+
+
+class ToolRecommendationOut(BaseModel):
+    name: str
+    category: Literal["Core", "AI", "Free", "Advanced"]
+    purpose: str
+    skill_level: str
+    is_free: bool
+    platform: str
+    why_recommended: str
+    alternative: str
+
+
+class AIWorkflowOut(BaseModel):
+    task: str
+    recommended_ai_tool: str
+    example_workflow: str
+    verification_requirement: str
+    limitation: str
+    privacy_warning: str
+
+
+class RoadmapResponse(BaseModel):
+    roadmap_id: str
+    title: str
+    primary_skill: str
+    target_role: str
+    current_level: str
+    target_level: str
+    estimated_hours: int
+    completion_percentage: float = 0.0
+    current_phase_number: int = 1
+    mode_used: Literal["ai_generated", "structured_template"]
+    personalization_reason: str
+    phases: list[RoadmapPhaseOut]
+    tools: list[ToolRecommendationOut]
+    ai_workflows: list[AIWorkflowOut]
+    schedule: dict[str, Any]
+    projects: list[RoadmapProjectOut]
+    assessments: list[RoadmapAssessmentOut]
+    resources: list[dict[str, str | bool]]
+    completed_items: list[str] = Field(default_factory=list)
+
+
+
+class MentorChatRequest(BaseModel):
+    roadmap_id: str
+    user_message: str = Field(min_length=2, max_length=2000)
+    current_phase_number: int = 1
+
+
+class MentorChatResponse(BaseModel):
+    reply: str
+    citations: list[str] = Field(default_factory=list)
+    suggested_questions: list[str] = Field(default_factory=list)
+    disclaimer: str = "AI guidance may contain mistakes. Verify important technical, academic and career decisions."
+
+
+class ProgressUpdateRequest(BaseModel):
+    item_id: str
+    is_completed: bool
+    github_url: str | None = None
+    demo_url: str | None = None
+

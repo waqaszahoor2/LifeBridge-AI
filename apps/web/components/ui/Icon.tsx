@@ -27,6 +27,8 @@ export type IconName =
   | "check"
   | "chevron-right"
   | "chevron-down"
+  | "chevronUp"
+  | "chevronDown"
   | "filter"
   | "grid"
   | "list"
@@ -37,6 +39,9 @@ export type IconName =
   | "ambulance"
   | "hospital"
   | "droplet"
+  | "arrowRight"
+  | "info"
+  | "circle"
   | "home";
 
 interface IconProps extends SVGProps<SVGSVGElement> {
@@ -46,7 +51,6 @@ interface IconProps extends SVGProps<SVGSVGElement> {
 
 export function Icon({ name, size = 18, className = "", ...props }: IconProps) {
   const pathMap: Record<IconName, ReactNode> = {
-
     sparkles: (
       <path
         strokeLinecap="round"
@@ -240,6 +244,12 @@ export function Icon({ name, size = 18, className = "", ...props }: IconProps) {
     "chevron-down": (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
     ),
+    chevronUp: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7" />
+    ),
+    chevronDown: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+    ),
     filter: (
       <path
         strokeLinecap="round"
@@ -319,6 +329,15 @@ export function Icon({ name, size = 18, className = "", ...props }: IconProps) {
         strokeWidth="2"
         d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"
       />
+    ),
+    arrowRight: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+    ),
+    info: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    ),
+    circle: (
+      <circle cx="12" cy="12" r="9" strokeWidth="2" />
     ),
     home: (
       <path

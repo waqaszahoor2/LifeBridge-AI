@@ -84,3 +84,135 @@ export interface DecisionGraph {
   top_items: Recommendation[];
   explanation: string;
 }
+
+// AI Skill Mentor Interfaces
+export interface SkillGoalRequest {
+  raw_goal: string;
+  target_skill?: string;
+  current_level?: "Beginner" | "Intermediate" | "Advanced";
+  known_skills?: string[];
+  career_goal?: string;
+  hours_per_day?: number;
+  days_per_week?: number;
+  target_months?: number;
+  learning_style?: "Videos" | "Reading" | "Practical Projects" | "Exercises" | "Mixed";
+  budget_preference?: "Free Only" | "Mostly Free" | "Paid Allowed";
+  country?: string;
+}
+
+export interface RoadmapPhase {
+  phase_number: number;
+  title: string;
+  objective: string;
+  estimated_hours: number;
+  topics: string[];
+  tools: string[];
+  ai_tools: string[];
+  exercises: string[];
+  project: string;
+  checkpoint: string;
+}
+
+export interface ToolRecommendation {
+  name: string;
+  category: "Core" | "AI" | "Free" | "Advanced";
+  purpose: string;
+  skill_level: string;
+  is_free: boolean;
+  platform: string;
+  why_recommended: string;
+  alternative: string;
+}
+
+export interface AIWorkflow {
+  task: string;
+  recommended_ai_tool: string;
+  example_workflow: string;
+  verification_requirement: string;
+  limitation: string;
+  privacy_warning: string;
+}
+
+export interface RoadmapProject {
+  id: string;
+  phase_number: number;
+  title: string;
+  problem_statement: string;
+  objective: string;
+  skills_practised: string[];
+  tools: string[];
+  ai_integration: string;
+  dataset_requirements: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced" | "Capstone";
+  estimated_hours: number;
+  is_capstone: boolean;
+  is_completed?: boolean;
+  github_url?: string;
+  demo_url?: string;
+}
+
+export interface RoadmapAssessment {
+  id: string;
+  phase_number: number;
+  title: string;
+  type: "multiple_choice" | "practical_task" | "debugging_task" | "mini_project";
+  questions: Array<{ question: string; options: string[]; answer: string }>;
+  passing_score: number;
+  is_completed?: boolean;
+  score?: number;
+}
+
+export interface SkillResource {
+  title: string;
+  provider: string;
+  url: string;
+  is_free: boolean;
+  is_official: boolean;
+}
+
+export interface RoadmapResponse {
+  roadmap_id: string;
+  title: string;
+  primary_skill: string;
+  target_role: string;
+  current_level: string;
+  target_level: string;
+  estimated_hours: number;
+  completion_percentage: number;
+  current_phase_number: number;
+  mode_used: "ai_generated" | "structured_template";
+  personalization_reason: string;
+  phases: RoadmapPhase[];
+  tools: ToolRecommendation[];
+  ai_workflows: AIWorkflow[];
+  schedule: {
+    weeks: Array<{
+      week_number: number;
+      title: string;
+      weekly_objective: string;
+      phase_number: number;
+      days: Array<{
+        id: string;
+        day_number: number;
+        estimated_hours: number;
+        topic: string;
+        practice_task: string;
+        ai_usage: string;
+        is_completed: boolean;
+      }>;
+      is_completed: boolean;
+    }>;
+  };
+  projects: RoadmapProject[];
+  assessments: RoadmapAssessment[];
+  resources: SkillResource[];
+  completed_items: string[];
+}
+
+export interface MentorChatResponse {
+  reply: string;
+  citations: string[];
+  suggested_questions: string[];
+  disclaimer: string;
+}
+

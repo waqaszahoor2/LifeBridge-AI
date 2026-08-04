@@ -13,6 +13,7 @@ interface NavGroupItem {
 
 const navItems: NavGroupItem[] = [
   { href: "/for-you", label: "For You", icon: "sparkles" },
+  { href: "/skills/mentor", label: "AI Skill Mentor", icon: "academic", badge: "New" },
   { href: "/opportunities", label: "Latest", icon: "clock" },
   { href: "/jobs", label: "Jobs", icon: "briefcase" },
   { href: "/scholarships", label: "Scholarships", icon: "academic" },
@@ -20,8 +21,9 @@ const navItems: NavGroupItem[] = [
   { href: "/weather", label: "Weather", icon: "cloud" },
   { href: "/services", label: "Services", icon: "services" },
   { href: "/trust-scanner", label: "Safety", icon: "shield" },
-  { href: "/skills", label: "Learning", icon: "book" },
+  { href: "/skills", label: "CV SkillBridge", icon: "book" },
 ];
+
 
 export function Sidebar() {
   const pathname = usePathname();

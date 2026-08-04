@@ -6,11 +6,12 @@ import { Icon, type IconName } from "./ui/Icon";
 
 const mobileLinks: Array<{ href: string; label: string; icon: IconName }> = [
   { href: "/for-you", label: "Home", icon: "sparkles" },
-  { href: "/opportunities", label: "Opportunities", icon: "clock" },
+  { href: "/skills/mentor", label: "Skills", icon: "academic" },
+  { href: "/opportunities", label: "Explore", icon: "clock" },
   { href: "/disasters", label: "Alerts", icon: "alert" },
-  { href: "/services", label: "Services", icon: "services" },
   { href: "/profile", label: "Profile", icon: "user" },
 ];
+
 
 export function MobileNav() {
   const pathname = usePathname();

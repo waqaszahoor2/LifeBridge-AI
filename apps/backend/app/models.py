@@ -131,3 +131,71 @@ class AuditLog(Base):
     details: Mapped[str] = mapped_column(Text, default="")
     request_id: Mapped[str] = mapped_column(String(80), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class UserSkillGoal(Base, TimestampMixin):
+    __tablename__ = "user_skill_goals"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    raw_goal: Mapped[str] = mapped_column(Text)
+    primary_skill: Mapped[str] = mapped_column(String(120), index=True)
+    current_level: Mapped[str] = mapped_column(String(50), default="Beginner")
+    target_level: Mapped[str] = mapped_column(String(50), default="Job Ready")
+    career_goal: Mapped[str] = mapped_column(String(180), default="")
+    hours_per_week: Mapped[int] = mapped_column(Integer, default=7)
+    target_months: Mapped[int] = mapped_column(Integer, default=6)
+    learning_style: Mapped[str] = mapped_column(String(50), default="Mixed")
+    free_resources_only: Mapped[bool] = mapped_column(Boolean, default=False)
+    known_skills_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
+class SkillRoadmap(Base, TimestampMixin):
+    __tablename__ = "skill_roadmaps"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    roadmap_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    goal_id: Mapped[int | None] = mapped_column(ForeignKey("user_skill_goals.id", ondelete="SET NULL"), nullable=True)
+    title: Mapped[str] = mapped_column(String(250))
+    primary_skill: Mapped[str] = mapped_column(String(120), index=True)
+    target_role: Mapped[str] = mapped_column(String(180))
+    current_level: Mapped[str] = mapped_column(String(50))
+    target_level: Mapped[str] = mapped_column(String(50))
+    estimated_hours: Mapped[int] = mapped_column(Integer, default=120)
+    completion_percentage: Mapped[float] = mapped_column(Float, default=0.0)
+    current_phase_number: Mapped[int] = mapped_column(Integer, default=1)
+    mode_used: Mapped[str] = mapped_column(String(40), default="ai_generated")
+    personalization_reason: Mapped[str] = mapped_column(Text, default="")
+    phases_json: Mapped[str] = mapped_column(Text, default="[]")
+    tools_json: Mapped[str] = mapped_column(Text, default="[]")
+    ai_workflows_json: Mapped[str] = mapped_column(Text, default="[]")
+    schedule_json: Mapped[str] = mapped_column(Text, default="{}")
+    resources_json: Mapped[str] = mapped_column(Text, default="[]")
+    projects_json: Mapped[str] = mapped_column(Text, default="[]")
+    assessments_json: Mapped[str] = mapped_column(Text, default="[]")
+    completed_items_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
+class MentorConversation(Base, TimestampMixin):
+    __tablename__ = "mentor_conversations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    roadmap_id: Mapped[str] = mapped_column(String(64), index=True)
+    messages_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
+class SkillResource(Base, TimestampMixin):
+    __tablename__ = "skill_resources"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    skill: Mapped[str] = mapped_column(String(120), index=True)
+    title: Mapped[str] = mapped_column(String(250))
+    provider: Mapped[str] = mapped_column(String(120))
+    resource_type: Mapped[str] = mapped_column(String(60))
+    level: Mapped[str] = mapped_column(String(50))
+    cost_type: Mapped[str] = mapped_column(String(30)) # Free, Paid, Official
+    url: Mapped[str] = mapped_column(Text)
+    is_official: Mapped[bool] = mapped_column(Boolean, default=False)
+
