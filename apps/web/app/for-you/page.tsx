@@ -13,13 +13,21 @@ import type { FeedItem } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
 
 
+import Link from "next/link";
+
 export default function ForYouPage() {
   return (
     <Suspense
       fallback={
         <AppShell>
-          <div className="container" style={{ padding: "40px 0", textAlign: "center" }}>
-            <p>Loading For You Feed...</p>
+          <div className="max-w-4xl mx-auto p-6 space-y-4">
+            <div className="h-48 rounded-3xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+            <div className="h-12 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-40 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+              ))}
+            </div>
           </div>
         </AppShell>
       }
@@ -28,6 +36,7 @@ export default function ForYouPage() {
     </Suspense>
   );
 }
+
 
 function ForYouFeedContent() {
   const searchParams = useSearchParams();
@@ -315,8 +324,49 @@ function ForYouFeedContent() {
       isRefreshing={loading}
     >
       <div className="lb-for-you-layout">
+        {/* Hero Banner Section */}
+        <div className="mb-6 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-primary-950 to-indigo-950 text-white shadow-xl border border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-primary-300 text-xs font-semibold mb-3 border border-white/10 backdrop-blur-md">
+              <Icon name="sparkles" size={14} />
+              <span>LifeBridge AI Platform</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 text-white">
+              Practical AI support for opportunities, skills, safety and everyday decisions.
+            </h2>
+            <p className="text-sm sm:text-base text-slate-300 mb-6 leading-relaxed">
+              Discover trusted opportunities, develop useful skills, verify suspicious content and find essential services from one accessible platform.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/assistant"
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-teal-400 hover:from-primary-600 hover:to-teal-500 text-slate-950 font-bold text-sm shadow-lg transition-all flex items-center gap-2"
+              >
+                <Icon name="sparkles" size={16} />
+                <span>Ask LifeBridge AI</span>
+              </Link>
+              <Link
+                href="/opportunities"
+                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/15 backdrop-blur-md transition-all flex items-center gap-2"
+              >
+                <Icon name="clock" size={16} />
+                <span>Explore Opportunities</span>
+              </Link>
+              <Link
+                href="/profile"
+                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/15 backdrop-blur-md transition-all flex items-center gap-2"
+              >
+                <Icon name="user" size={16} />
+                <span>Build My Profile</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+
         {/* Top Urgent Emergency Alert Banner (from design-reference.png) */}
         <div className="lb-urgent-alert-banner" role="alert">
+
           <div className="urgent-banner-left">
             <div className="urgent-icon-circle">
               <Icon name="alert" size={20} className="text-red" />

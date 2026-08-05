@@ -102,9 +102,15 @@ export default function SkillsPage() {
                   placeholder="Data analyst with experience using Python, SQL, Power BI..."
                 />
               </label>
-              <button className="primary" disabled={loading}>
-                {loading ? "Analysing…" : "Analyse CV Skills"}
-              </button>
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                <button className="primary" disabled={loading}>
+                  {loading ? "Analysing…" : "Analyse CV Skills"}
+                </button>
+                <Link href="/assistant" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow hover:opacity-95 transition-all">
+                  <Icon name="sparkles" size={16} />
+                  <span>Chat with AI Skill Coach</span>
+                </Link>
+              </div>
               {error && <p className="form-error">{error}</p>}
             </form>
             {result && (
@@ -123,11 +129,27 @@ export default function SkillsPage() {
                     </article>
                   ))}
                 </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Next Steps with AI Skill Coach:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/assistant" className="px-3 py-1.5 text-xs font-medium bg-primary-500/10 text-primary-600 dark:text-primary-300 rounded-lg hover:bg-primary-500/20 transition-colors">
+                      💬 Which skill should I learn first?
+                    </Link>
+                    <Link href="/assistant" className="px-3 py-1.5 text-xs font-medium bg-primary-500/10 text-primary-600 dark:text-primary-300 rounded-lg hover:bg-primary-500/20 transition-colors">
+                      🗺️ Create my 90-day roadmap
+                    </Link>
+                    <Link href="/assistant" className="px-3 py-1.5 text-xs font-medium bg-primary-500/10 text-primary-600 dark:text-primary-300 rounded-lg hover:bg-primary-500/20 transition-colors">
+                      💼 Suggest projects based on my profile
+                    </Link>
+                  </div>
+                </div>
               </section>
             )}
           </div>
         </div>
       </div>
     </AppShell>
+
   );
 }

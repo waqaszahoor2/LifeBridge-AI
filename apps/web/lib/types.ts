@@ -223,18 +223,23 @@ export interface ChatMessage {
 
 export interface AssistantChatRequest {
   messages: ChatMessage[];
+  mode?: "lifebridge_assistant" | "skill_coach";
   roadmap_id?: string;
   temperature?: number;
   max_tokens?: number;
 }
 
 export interface AssistantChatResponse {
+  message?: ChatMessage;
   reply: string;
+  model?: string;
   model_used: string;
+  conversation_id?: string;
   provider: string;
   citations: string[];
   disclaimer: string;
   status: string;
 }
+
 
 

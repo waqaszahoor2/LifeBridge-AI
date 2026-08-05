@@ -5,6 +5,8 @@ import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
 
+import { FloatingAssistantButton } from "./ui/FloatingAssistantButton";
+
 export function AppShell({
   children,
   pageTitle,
@@ -30,9 +32,11 @@ export function AppShell({
         />
         <main className="lb-app-content-body">{children}</main>
       </div>
+      <FloatingAssistantButton />
       <MobileNav />
     </div>
   );
 }
+
 
 

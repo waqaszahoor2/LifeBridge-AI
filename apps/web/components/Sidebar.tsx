@@ -13,16 +13,18 @@ interface NavGroupItem {
 
 const navItems: NavGroupItem[] = [
   { href: "/for-you", label: "For You", icon: "sparkles" },
-  { href: "/skills/mentor", label: "AI Skill Mentor", icon: "academic", badge: "New" },
-  { href: "/opportunities", label: "Latest", icon: "clock" },
+  { href: "/assistant", label: "AI Assistant", icon: "sparkles", badge: "AI" },
+  { href: "/skills/mentor", label: "AI Skill Mentor", icon: "academic" },
+  { href: "/opportunities", label: "Opportunities", icon: "clock" },
   { href: "/jobs", label: "Jobs", icon: "briefcase" },
   { href: "/scholarships", label: "Scholarships", icon: "academic" },
-  { href: "/disasters", label: "Disasters", icon: "alert" },
-  { href: "/weather", label: "Weather", icon: "cloud" },
+  { href: "/disasters", label: "Safety Alerts", icon: "alert" },
   { href: "/services", label: "Services", icon: "services" },
-  { href: "/trust-scanner", label: "Safety", icon: "shield" },
+  { href: "/trust-scanner", label: "Trust Scanner", icon: "shield" },
   { href: "/skills", label: "CV SkillBridge", icon: "book" },
+  { href: "/saved", label: "Saved Items", icon: "bookmark" },
 ];
+
 
 
 export function Sidebar() {
@@ -79,10 +81,11 @@ export function Sidebar() {
         <p className="promo-desc">
           Your AI companion for health, safety, learning and more.
         </p>
-        <Link href="/skills" className="promo-btn">
+        <Link href="/assistant" className="promo-btn">
           <Icon name="sparkles" size={15} />
           <span>Chat Now</span>
         </Link>
+
       </div>
 
       {/* Footer Navigation Options */}

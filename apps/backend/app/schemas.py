@@ -390,17 +390,29 @@ class ChatMessage(BaseModel):
 
 class AssistantChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=50)
+    mode: Literal["lifebridge_assistant", "skill_coach"] = "lifebridge_assistant"
     roadmap_id: str | None = None
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=1024, ge=1, le=4096)
 
 
 class AssistantChatResponse(BaseModel):
+    message: ChatMessage
     reply: str
+    model: str
     model_used: str
+    conversation_id: str
     provider: str
     citations: list[str] = Field(default_factory=list)
-    disclaimer: str = "AI guidance may contain mistakes. Verify important decisions."
+    disclaimer: str = "AI guidance is for informational purposes. Verify important decisions."
     status: str = "success"
+
+
+class AssistantHealthResponse(BaseModel):
+    status: str = "ready"
+    provider: str = "groq"
+    model_configured: bool = True
+    api_key_configured: bool = True
+
 
 

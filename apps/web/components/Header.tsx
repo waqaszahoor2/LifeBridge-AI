@@ -25,7 +25,7 @@ export function Header({
     }
     return "system";
   });
-  const [unreadCount, setUnreadCount] = useState<number>(3);
+  const [unreadCount, setUnreadCount] = useState<number>(2);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
 
   useEffect(() => {
@@ -55,6 +55,15 @@ export function Header({
 
         {/* Right Header Actions */}
         <div className="header-right-actions">
+          {/* AI Assistant Navigation Button */}
+          <Link
+            href="/assistant"
+            className="header-btn font-semibold text-xs px-3 py-1.5 rounded-lg bg-gradient-to-r from-primary-600 to-indigo-600 text-white hover:opacity-95 transition-all flex items-center gap-1.5 shadow-sm"
+          >
+            <Icon name="sparkles" size={14} />
+            <span className="hidden sm:inline">AI Assistant</span>
+          </Link>
+
           {/* Refresh Action Button */}
           {onRefresh && (
             <button
@@ -79,6 +88,7 @@ export function Header({
             <Icon name="bell" size={18} />
             {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
           </button>
+
 
           {/* Theme Toggle Selector */}
           <ThemeToggle mode={theme} onChange={setTheme} />
@@ -129,7 +139,10 @@ export function Header({
 
 function getTitleFromPath(pathname: string): string {
   switch (pathname) {
+    case "/assistant":
+      return "AI Assistant";
     case "/for-you":
+
     case "/":
       return "For You";
     case "/jobs":
