@@ -115,6 +115,11 @@ export function FeedCard({
             <div className="card-top-row">
               <div className="meta-category-time">
                 <span className="category-name">{item.category.charAt(0).toUpperCase() + item.category.slice(1)} Update</span>
+                {(item.verification_status === "demo" || (item as any).data_mode === "demo") && (
+                  <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    Demo Data — Not a live alert
+                  </span>
+                )}
                 <span className="meta-bullet">•</span>
                 <RelativeTime value={item.published_at} />
               </div>

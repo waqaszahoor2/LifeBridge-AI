@@ -47,12 +47,18 @@ export default function AssistantPage() {
   const activeAbortController = useRef<AbortController | null>(null);
 
   // Check health on mount
+  // Check health & consent on mount
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/v1/assistant/health`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("Health response not OK");
+        return res.json();
+      })
       .then((data) => {
-        if (data.status === "ready" && data.api_key_configured) {
-          setHealthStatus({ isReady: true, provider: "Groq AI (llama-3.1-8b-instant)" });
+        const isLive = data.status === "ready" && data.configured === true && data.provider_verified === true;
+        const modelName = data.model || "llama-3.1-8b-instant";
+        if (isLive) {
+          setHealthStatus({ isReady: true, provider: `Groq AI (${modelName})` });
         } else {
           setHealthStatus({ isReady: false, provider: "Local Demo Mode" });
         }
@@ -62,17 +68,31 @@ export default function AssistantPage() {
       });
 
     if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("lifebridge_assistant_history");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
-            return;
+      const consentValue = localStorage.getItem("lifebridge_opt_in_history") === "true";
+      setOptInSaveHistory(consentValue);
+
+      if (consentValue) {
+        try {
+          const stored = localStorage.getItem("lifebridge_assistant_history");
+          const storedExpiry = localStorage.getItem("lifebridge_assistant_history_expiry");
+          const now = Date.now();
+
+          if (storedExpiry && parseInt(storedExpiry, 10) < now) {
+            localStorage.removeItem("lifebridge_assistant_history");
+            localStorage.removeItem("lifebridge_assistant_history_expiry");
+          } else if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setMessages(parsed);
+              return;
+            }
           }
+        } catch {
+          // Fallback
         }
-      } catch {
-        // Fallback
+      } else {
+        localStorage.removeItem("lifebridge_assistant_history");
+        localStorage.removeItem("lifebridge_assistant_history_expiry");
       }
     }
 
@@ -92,14 +112,32 @@ export default function AssistantPage() {
 
   // Save history only if opt-in enabled
   useEffect(() => {
-    if (typeof window !== "undefined" && messages.length > 0 && optInSaveHistory) {
-      try {
-        localStorage.setItem("lifebridge_assistant_history", JSON.stringify(messages));
-      } catch {
-        // Ignore
+    if (typeof window !== "undefined") {
+      if (optInSaveHistory && messages.length > 0) {
+        try {
+          localStorage.setItem("lifebridge_assistant_history", JSON.stringify(messages));
+          // 7-day expiration
+          localStorage.setItem("lifebridge_assistant_history_expiry", String(Date.now() + 7 * 86400 * 1000));
+        } catch {
+          // Ignore
+        }
+      } else if (!optInSaveHistory) {
+        localStorage.removeItem("lifebridge_assistant_history");
+        localStorage.removeItem("lifebridge_assistant_history_expiry");
       }
     }
   }, [messages, optInSaveHistory]);
+
+  const handleConsentToggle = (enabled: boolean) => {
+    setOptInSaveHistory(enabled);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lifebridge_opt_in_history", String(enabled));
+      if (!enabled) {
+        localStorage.removeItem("lifebridge_assistant_history");
+        localStorage.removeItem("lifebridge_assistant_history_expiry");
+      }
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,7 +159,7 @@ export default function AssistantPage() {
       },
     ];
     setMessages(initial);
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && optInSaveHistory) {
       localStorage.setItem("lifebridge_assistant_history", JSON.stringify(initial));
     }
     setErrorMsg(null);
@@ -131,6 +169,7 @@ export default function AssistantPage() {
     setMessages([]);
     if (typeof window !== "undefined") {
       localStorage.removeItem("lifebridge_assistant_history");
+      localStorage.removeItem("lifebridge_assistant_history_expiry");
     }
     setErrorMsg(null);
   }
@@ -306,7 +345,17 @@ export default function AssistantPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={optInSaveHistory}
+                onChange={(e) => handleConsentToggle(e.target.checked)}
+                className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+              />
+              <span>Save chat history on this device</span>
+            </label>
+
             <button
               type="button"
               onClick={handleNewChat}

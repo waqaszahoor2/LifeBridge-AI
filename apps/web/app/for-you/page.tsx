@@ -206,38 +206,6 @@ function ForYouFeedContent() {
     };
   }, [hasMore, loading, loadingMore, loadNextPage]);
 
-  // Real-time background sync simulation for urgent emergency warnings
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const urgentItem: FeedItem = {
-        id: Date.now(),
-        external_id: `urgent-disaster-${Date.now()}`,
-        category: "disaster",
-        title: "🚨 URGENT: Flash Flood Emergency Warning Issued",
-        summary: "National Disaster Management Authority issues emergency advisory for low-lying areas in Sindh & Punjab. Evacuation routes active.",
-        source_name: "NDMA Pakistan Safety Portal",
-        source_url: "https://ndma.gov.pk",
-        published_at: new Date().toISOString(),
-        collected_at: new Date().toISOString(),
-        last_checked_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 86400000 * 2).toISOString(),
-        location: "Pakistan (Sindh & Punjab)",
-        country_code: "PK",
-        tags: "disaster;flood;emergency;safety",
-        severity: "critical",
-        verification_status: "verified",
-        source_reliability: 0.99,
-        recommendation_reason: "Urgent disaster safety warning prioritised for your region.",
-        match_score: 0.99,
-      };
-      setPendingNewItems([urgentItem]);
-      setNewUpdatesCount(1);
-    }, 18000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleShowNewUpdates = () => {
     if (pendingNewItems.length > 0) {
       setItems((prev) => [...pendingNewItems, ...prev]);
@@ -372,17 +340,17 @@ function ForYouFeedContent() {
             </div>
             <div className="urgent-text-content">
               <div className="urgent-header-row">
-                <span className="urgent-label-red">DEMONSTRATION ALERT</span>
-                <span className="urgent-badge-high">Sample Notice</span>
+                <span className="urgent-label-red">DEMONSTRATION ALERT — NOT A LIVE WARNING</span>
+                <span className="urgent-badge-high">UI Demo Notice</span>
               </div>
               <p className="urgent-message-body">
-                This is a platform demonstration alert layout. Real emergency bulletins are sourced directly from verified regional disaster APIs.
+                This is a platform demonstration alert layout. Live emergency bulletins are sourced directly from verified regional disaster APIs when configured.
               </p>
               <div className="urgent-footer-row">
                 <a href="/disasters" className="urgent-action-link">
                   View Disaster Bulletin Directory &gt;
                 </a>
-                <span className="urgent-source-meta">Source: Platform System • Verified Demo Notice</span>
+                <span className="urgent-source-meta">Source: LifeBridge AI Demo Layout • UI Demonstration Only</span>
               </div>
             </div>
           </div>

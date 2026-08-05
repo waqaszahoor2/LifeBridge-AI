@@ -34,9 +34,9 @@ export default function SavedPage() {
 
         // Match sampleFeed items or local items
         const matched = sampleFeed.filter((item) => ids.includes(item.id));
-        setSavedItems(matched.length > 0 ? matched : sampleFeed.slice(0, 2));
+        setSavedItems(matched);
       } catch {
-        setSavedItems(sampleFeed.slice(0, 2));
+        setSavedItems([]);
       }
     }
   }, []);

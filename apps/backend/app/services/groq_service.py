@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -36,10 +36,12 @@ def format_messages_for_groq(
     if not has_system:
         formatted_messages.append({"role": "system", "content": base_prompt})
 
+    # Clean history before sending to provider (Item 12 requirement)
     for msg in messages:
         role = msg.get("role", "user")
         content = msg.get("content", "")
-        if role in ["system", "user", "assistant"] and content:
+        # Exclude system welcome messages, empty placeholders, or failed messages
+        if role in ["system", "user", "assistant"] and content and not content.startswith("[Local Demo Mode]") and not content.startswith("The live AI assistant is temporarily unavailable"):
             formatted_messages.append({"role": role, "content": content})
 
     return formatted_messages
@@ -85,7 +87,7 @@ def call_groq_chat(
                 "status": "success",
             }
         except Exception as err:
-            logger.error(f"Groq API provider execution error: {err}")
+            logger.error(f"Groq API provider execution error: {type(err).__name__}")
             raise Exception("Groq API request failed. Check server configuration or network connectivity.")
 
     # Local Demo Mode fallback (when GROQ_API_KEY is not configured)
@@ -111,7 +113,7 @@ def stream_groq_chat(
     max_tokens: int = 1024,
     roadmap_context: Optional[str] = None,
 ) -> Generator[Dict[str, Any], None, None]:
-    """Generates genuine real-time Groq tokens directly using client.chat.completions.create(stream=True)."""
+    """Generates real-time Groq tokens directly."""
     settings = get_settings()
     api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
     model = settings.groq_model or "llama-3.1-8b-instant"
@@ -151,8 +153,68 @@ def stream_groq_chat(
         yield {"type": "done"}
 
     except Exception as err:
-        logger.error(f"Groq streaming error: {err}")
+        logger.error(f"Groq streaming error: {type(err).__name__}")
         yield {"type": "error", "message": "The live Groq AI assistant stream encountered an error."}
+
+
+async def stream_groq_chat_async(
+    messages: List[Dict[str, str]],
+    mode: str = "lifebridge_assistant",
+    temperature: float = 0.7,
+    max_tokens: int = 1024,
+    roadmap_context: Optional[str] = None,
+    request_id: Optional[str] = None,
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """Asynchronous non-blocking Groq token generator using AsyncGroq."""
+    settings = get_settings()
+    api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
+    model = settings.groq_model or "llama-3.1-8b-instant"
+    req_id = request_id or f"req_{uuid.uuid4().hex[:8]}"
+
+    formatted_messages = format_messages_for_groq(messages, mode, roadmap_context)
+    is_groq_configured = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
+
+    if not is_groq_configured:
+        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine"}
+        last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
+        demo_reply = generate_generic_demo_response(last_user_msg)
+        yield {"type": "token", "content": demo_reply}
+        yield {"type": "done"}
+        return
+
+    try:
+        from groq import AsyncGroq
+
+        client = AsyncGroq(api_key=api_key)
+        completion = await client.chat.completions.create(
+            model=model,
+            messages=formatted_messages,
+            temperature=min(max(temperature, 0.0), 1.0),
+            max_tokens=max_tokens,
+            stream=True,
+        )
+
+        yield {"type": "meta", "provider": "groq", "status": "success", "model": model}
+
+        try:
+            async for chunk in completion:
+                if chunk.choices and len(chunk.choices) > 0:
+                    delta = chunk.choices[0].delta
+                    token = delta.content if delta and hasattr(delta, "content") else None
+                    if token:
+                        yield {"type": "token", "content": token}
+            yield {"type": "done"}
+        finally:
+            if hasattr(completion, "close"):
+                await completion.close()
+
+    except Exception as err:
+        logger.error(f"[Req {req_id}] Groq async streaming error: {type(err).__name__}")
+        yield {
+            "type": "error",
+            "message": "The live Groq AI assistant stream encountered an error.",
+            "request_id": req_id,
+        }
 
 
 def generate_generic_demo_response(user_query: str) -> str:

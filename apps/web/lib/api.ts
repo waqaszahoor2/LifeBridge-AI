@@ -4,11 +4,21 @@ import type { AssistantChatRequest, AssistantChatResponse, CursorPaginatedRespon
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-if (!configuredApiUrl && typeof window !== "undefined" && process.env.NODE_ENV === "production") {
-  console.warn("NEXT_PUBLIC_API_BASE_URL is missing in production environment. Demonstrations will use fallback mode.");
+if (process.env.NODE_ENV === "production") {
+  if (!configuredApiUrl) {
+    throw new Error("[Build Failure] NEXT_PUBLIC_API_BASE_URL is required in production environment.");
+  }
+  if (!configuredApiUrl.startsWith("https://")) {
+    throw new Error("[Build Failure] NEXT_PUBLIC_API_BASE_URL must begin with https:// in production environment.");
+  }
+  if (typeof window === "undefined") {
+    const origin = new URL(configuredApiUrl).origin;
+    console.log(`[Production API Target] ${origin}`);
+  }
 }
 
-export const API_BASE_URL = configuredApiUrl?.replace(/\/$/, "") || "http://localhost:8000";
+export const API_BASE_URL = configuredApiUrl ? configuredApiUrl.replace(/\/$/, "") : "http://localhost:8000";
+export const IS_DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true" || process.env.NODE_ENV !== "production";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {

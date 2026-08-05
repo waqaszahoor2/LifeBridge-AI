@@ -3,7 +3,7 @@ import logging
 import time
 import uuid
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import SkillRoadmap
 from app.schemas import AssistantChatRequest, AssistantChatResponse, ChatMessage
-from app.services.groq_service import call_groq_chat, stream_groq_chat
+from app.services.groq_service import call_groq_chat, stream_groq_chat_async
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/assistant", tags=["assistant"])
@@ -62,22 +62,32 @@ def assistant_health():
             from groq import Groq
 
             client = Groq(api_key=api_key)
-            # Lightweight verification
-            models_list = client.models.list()
-            LAST_VERIFIED_CACHE["verified"] = True
+            models_page = client.models.list()
+            available_models = [m.id for m in getattr(models_page, "data", [])] if hasattr(models_page, "data") else []
+            model_exists = model in available_models if available_models else True
+
+            LAST_VERIFIED_CACHE["verified"] = model_exists
             LAST_VERIFIED_CACHE["timestamp"] = now
         except Exception as err:
-            logger.warning(f"Groq health check verification failed: {err}")
+            logger.warning(f"Groq health check verification failed: {type(err).__name__}")
             LAST_VERIFIED_CACHE["verified"] = False
             LAST_VERIFIED_CACHE["timestamp"] = now
 
+    last_verified = (
+        time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(LAST_VERIFIED_CACHE["timestamp"]))
+        if LAST_VERIFIED_CACHE["timestamp"] > 0
+        else None
+    )
+
+    is_ready = has_key and LAST_VERIFIED_CACHE.get("verified", False)
+
     return {
-        "status": "ready" if (has_key and LAST_VERIFIED_CACHE["verified"]) else "demo",
-        "provider": "groq" if (has_key and LAST_VERIFIED_CACHE["verified"]) else "local_demo",
+        "status": "ready" if is_ready else "demo",
+        "provider": "groq" if is_ready else "local_demo",
         "configured": has_key,
-        "provider_verified": LAST_VERIFIED_CACHE["verified"] if has_key else False,
+        "provider_verified": LAST_VERIFIED_CACHE.get("verified", False) if has_key else False,
         "model": model,
-        "last_verified_at": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(LAST_VERIFIED_CACHE["timestamp"])),
+        "last_verified_at": last_verified,
     }
 
 
@@ -95,6 +105,7 @@ def assistant_chat(payload: AssistantChatRequest, request: Request, db: Session 
     messages_data = [msg.model_dump() for msg in payload.messages]
 
     try:
+        start_t = time.time()
         result = call_groq_chat(
             messages=messages_data,
             mode=payload.mode,
@@ -102,6 +113,8 @@ def assistant_chat(payload: AssistantChatRequest, request: Request, db: Session 
             max_tokens=payload.max_tokens,
             roadmap_context=roadmap_context,
         )
+        duration_ms = int((time.time() - start_t) * 1000)
+        logger.info(f"Chat request processed successfully: provider={result.get('provider')}, model={result.get('model')}, duration={duration_ms}ms")
         return AssistantChatResponse(
             message=ChatMessage(
                 role=result["message"]["role"],
@@ -120,7 +133,7 @@ def assistant_chat(payload: AssistantChatRequest, request: Request, db: Session 
         raise
     except Exception as err:
         request_id = f"req_{uuid.uuid4().hex[:8]}"
-        logger.error(f"[Req {request_id}] Backend chat error: {err}")
+        logger.error(f"[Req {request_id}] Backend chat error: {type(err).__name__}")
         raise HTTPException(
             status_code=500,
             detail={
@@ -133,7 +146,7 @@ def assistant_chat(payload: AssistantChatRequest, request: Request, db: Session 
 
 @router.post("/chat/stream")
 async def assistant_chat_stream(payload: AssistantChatRequest, request: Request, db: Session = Depends(get_db)):
-    """Streaming response endpoint delivering real-time SSE tokens directly from Groq."""
+    """Streaming response endpoint delivering real-time non-blocking SSE tokens directly from Groq."""
     client_ip = get_client_ip(request)
     check_rate_limit(client_ip)
 
@@ -144,26 +157,27 @@ async def assistant_chat_stream(payload: AssistantChatRequest, request: Request,
             roadmap_context = f"Skill: {roadmap.primary_skill}, Target Role: {roadmap.target_role}"
 
     messages_data = [msg.model_dump() for msg in payload.messages]
+    req_id = f"req_{uuid.uuid4().hex[:8]}"
 
     async def event_generator():
         try:
-            stream = stream_groq_chat(
+            stream = stream_groq_chat_async(
                 messages=messages_data,
                 mode=payload.mode,
                 temperature=payload.temperature,
                 max_tokens=payload.max_tokens,
                 roadmap_context=roadmap_context,
+                request_id=req_id,
             )
 
-            for event in stream:
+            async for event in stream:
                 if await request.is_disconnected():
-                    logger.info("Client disconnected during SSE stream. Stopping Groq generator.")
+                    logger.info(f"[Req {req_id}] Client disconnected during SSE stream. Stopping generator.")
                     break
                 yield f"data: {json.dumps(event)}\n\n"
 
         except Exception as err:
-            req_id = f"req_{uuid.uuid4().hex[:8]}"
-            logger.error(f"[Stream Req {req_id}] Generator error: {err}")
+            logger.error(f"[Req {req_id}] Generator error: {type(err).__name__}")
             err_data = {
                 "type": "error",
                 "message": "The live AI assistant stream is temporarily unavailable.",

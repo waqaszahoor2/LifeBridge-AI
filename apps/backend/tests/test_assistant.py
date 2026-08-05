@@ -6,7 +6,10 @@ def test_assistant_health_endpoint(client):
     data = response.json()
     assert "status" in data
     assert "provider" in data
-    assert data["provider"] == "groq"
+    assert "configured" in data
+    assert "provider_verified" in data
+    assert "model" in data
+    assert "last_verified_at" in data
     assert "api_key" not in data  # Ensure secrets are never leaked
 
 
