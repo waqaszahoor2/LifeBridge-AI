@@ -7,6 +7,8 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Icon } from "./ui/Icon";
 import type { ThemeMode } from "@/lib/types";
 
+import { useAuth } from "@/context/AuthContext";
+
 export function Header({
   pageTitle = "For You",
   pageSubtitle = "Personalized updates and insights that matter to you.",
@@ -19,13 +21,14 @@ export function Header({
   isRefreshing?: boolean;
 }) {
   const pathname = usePathname();
+  const { isAuthenticated, user, logout, unreadCount, setUnreadCount } = useAuth();
+  
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("lifebridge-theme") as ThemeMode) || "system";
     }
     return "system";
   });
-  const [unreadCount, setUnreadCount] = useState<number>(2);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
 
   useEffect(() => {
@@ -89,7 +92,6 @@ export function Header({
             {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
           </button>
 
-
           {/* Theme Toggle Selector */}
           <ThemeToggle mode={theme} onChange={setTheme} />
 
@@ -102,7 +104,9 @@ export function Header({
               aria-expanded={showProfileMenu}
               aria-label="User Account Options"
             >
-              <span className="greeting-text">Hello, Aarav</span>
+              <span className="greeting-text">
+                {isAuthenticated ? `Hello, ${user?.name || "Member"}` : "Hello, Guest"}
+              </span>
               <div className="avatar-img-placeholder">
                 <Icon name="user" size={18} />
               </div>
@@ -110,24 +114,44 @@ export function Header({
 
             {showProfileMenu && (
               <div className="profile-menu-dropdown" role="menu">
-                <div className="dropdown-user-info">
-                  <div className="dropdown-user-name">Aarav Sharma</div>
-                  <div className="dropdown-user-email">aarav.sharma@lifebridge.ai</div>
-                  <div className="dropdown-user-role">Student & Civic Safety Volunteer</div>
-                </div>
-                <hr className="dropdown-divider" />
-                <Link href="/profile" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  <Icon name="user" size={16} /> My Profile & Preferences
-                </Link>
-                <Link href="/saved" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  <Icon name="bookmark" size={16} /> Saved Opportunities
-                </Link>
-                <Link href="/skills" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  <Icon name="book" size={16} /> SkillBridge Intelligence
-                </Link>
-                <Link href="/settings" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                  <Icon name="settings" size={16} /> Settings
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                    <div className="dropdown-user-info">
+                      <div className="dropdown-user-name">{user?.name || "Platform Member"}</div>
+                      <div className="dropdown-user-email">{user?.email || "user@lifebridge.ai"}</div>
+                      <div className="dropdown-user-role">{user?.role || "Member"}</div>
+                    </div>
+                    <hr className="dropdown-divider" />
+                    <Link href="/profile" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
+                      <Icon name="user" size={16} /> My Profile & Preferences
+                    </Link>
+                    <Link href="/saved" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
+                      <Icon name="bookmark" size={16} /> Saved Opportunities
+                    </Link>
+                    <button
+                      type="button"
+                      className="dropdown-item text-rose-600 dark:text-rose-400 w-full text-left"
+                      role="menuitem"
+                      onClick={() => {
+                        logout();
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      <Icon name="logout" size={16} /> Log Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="dropdown-user-info">
+                      <div className="dropdown-user-name">Guest Explorer</div>
+                      <div className="dropdown-user-email">Sign in to save items & sync preferences</div>
+                    </div>
+                    <hr className="dropdown-divider" />
+                    <Link href="/login" className="dropdown-item font-semibold text-primary-600" role="menuitem" onClick={() => setShowProfileMenu(false)}>
+                      <Icon name="user" size={16} /> Sign In to LifeBridge AI
+                    </Link>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -138,6 +162,7 @@ export function Header({
 }
 
 function getTitleFromPath(pathname: string): string {
+
   switch (pathname) {
     case "/assistant":
       return "AI Assistant";

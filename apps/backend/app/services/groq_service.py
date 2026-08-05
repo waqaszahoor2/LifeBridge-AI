@@ -96,19 +96,32 @@ def call_groq_chat(
 def generate_fallback_response(user_query: str, mode: str, history: List[Dict[str, str]]) -> str:
     q = user_query.lower()
 
-    # Multi-turn context awareness simulation
-    prev_user_msgs = [m["content"] for m in history if m.get("role") == "user"]
-    knows_python = any("python" in m.lower() for m in prev_user_msgs)
+    # Multi-turn context awareness extraction across entire history
+    all_user_text = " ".join([m.get("content", "").lower() for m in history if m.get("role") == "user"])
+    knows_python = "python" in all_user_text
+    wants_ds = "data science" in all_user_text or "data scientist" in all_user_text
+    has_time = "hour" in all_user_text or "daily" in all_user_text or "time" in all_user_text
 
-    if mode == "skill_coach":
-        if "data science" in q or "data scientist" in q:
-            prefix = "Since you mentioned knowing Python earlier, " if knows_python else ""
+    if mode == "skill_coach" or wants_ds:
+        if "python" in q and ("hour" in q or "daily" in q or has_time or wants_ds):
             return (
-                f"{prefix}Data Science is a high-impact field! Here is your recommended 4-step roadmap:\n\n"
+                "Excellent! With your foundation in basic Python and a dedicated 1-hour daily study routine for Data Science, "
+                "you can achieve job-ready fundamentals in 90 days.\n\n"
+                "📅 **90-Day Custom Learning Plan (1 hour/day)**:\n"
+                "• **Month 1 (Days 1-30)**: NumPy & Pandas Data Manipulation (30 mins learning, 30 mins code exercises).\n"
+                "• **Month 2 (Days 31-60)**: Exploratory Data Analysis & SQL (Matplotlib/Seaborn & PostgreSQL queries).\n"
+                "• **Month 3 (Days 61-90)**: Applied Machine Learning & Portfolio Project (scikit-learn classification model published to GitHub).\n\n"
+                "Would you like me to generate your specific Week 1 daily exercises or suggest a beginner portfolio project?"
+            )
+        elif "data science" in q or "data scientist" in q:
+            prefix = "Since you mentioned your interest in Data Science, " if wants_ds else ""
+            return (
+                f"{prefix}Data Science is a great career path! Here is your recommended 4-step roadmap:\n\n"
                 "1. **Python Fundamentals & Data Wrangling**: Master pandas, numpy, and Jupyter Notebooks.\n"
                 "2. **Exploratory Data Analysis & Viz**: Learn Matplotlib, Seaborn, and SQL queries.\n"
                 "3. **Applied Machine Learning**: Build classification and regression models using scikit-learn.\n"
-                "4. **AI-Assisted Portfolio Project**: Build a real-world prediction dashboard and publish to GitHub."
+                "4. **AI-Assisted Portfolio Project**: Build a real-world prediction dashboard and publish to GitHub.\n\n"
+                "What is your current programming experience (e.g. Python, SQL, or beginner) and available daily study time?"
             )
         elif "python" in q:
             return (
@@ -118,6 +131,7 @@ def generate_fallback_response(user_query: str, mode: str, history: List[Dict[st
                 "• **Week 5-8**: Choose specialization (FastAPI for Backend or pandas for Data Analytics).\n"
                 "What is your target study commitment per day?"
             )
+
         elif "project" in q or "portfolio" in q:
             return (
                 "Great portfolio project ideas on LifeBridge AI:\n"
