@@ -1,5 +1,6 @@
 import { sampleFeed } from "./sample-data";
-import type { CursorPaginatedResponse, CvAnalysis, DecisionGraph, FeedItem, NearbyService, Recommendation, ScamCheckResult } from "./types";
+import type { AssistantChatRequest, AssistantChatResponse, CursorPaginatedResponse, CvAnalysis, DecisionGraph, FeedItem, MentorChatResponse, NearbyService, Recommendation, RoadmapResponse, ScamCheckResult, SkillGoalRequest } from "./types";
+
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
 
@@ -180,7 +181,7 @@ export async function buildDecisionGraph(payload: Record<string, unknown>): Prom
 }
 
 // AI Skill Mentor Client API
-import type { MentorChatResponse, RoadmapResponse, SkillGoalRequest } from "./types";
+
 
 export async function generateRoadmap(payload: SkillGoalRequest): Promise<RoadmapResponse> {
   try {
@@ -406,10 +407,16 @@ export async function updateRoadmapProgress(roadmapId: string, itemId: string, i
 
 export async function sendMentorChatMessage(roadmapId: string, userMessage: string, currentPhase = 1): Promise<MentorChatResponse> {
   try {
-    return await request<MentorChatResponse>("/api/v1/skills/mentor/chat", {
-      method: "POST",
-      body: JSON.stringify({ roadmap_id: roadmapId, user_message: userMessage, current_phase_number: currentPhase }),
+    const res = await sendAssistantChat({
+      messages: [{ role: "user", content: userMessage }],
+      roadmap_id: roadmapId,
     });
+    return {
+      reply: res.reply,
+      citations: res.citations || [`Phase ${currentPhase} Roadmap Guidelines`],
+      suggested_questions: ["Explain Phase concepts simply", "Give me a practice exercise", "How do I audit AI outputs?"],
+      disclaimer: res.disclaimer,
+    };
   } catch {
     return {
       reply: `AI Skill Mentor Response:\n\nRegarding your question: "${userMessage}"\n\nFocus on practicing core exercises in Phase ${currentPhase}. Always verify AI-generated output against official documentation.`,
@@ -419,4 +426,24 @@ export async function sendMentorChatMessage(roadmapId: string, userMessage: stri
     };
   }
 }
+
+export async function sendAssistantChat(req: AssistantChatRequest): Promise<AssistantChatResponse> {
+  try {
+    return await request<AssistantChatResponse>("/api/v1/assistant/chat", {
+      method: "POST",
+      body: JSON.stringify(req),
+    });
+  } catch {
+    const lastMsg = req.messages[req.messages.length - 1]?.content || "";
+    return {
+      reply: `LifeBridge AI Assistant:\n\nThank you for asking: "${lastMsg}".\n\nI can assist you with personalized skill roadmaps, job preparation, scholarship applications, emergency disaster updates, and safe online navigation.`,
+      model_used: "llama-3.1-8b-instant (Offline Demo)",
+      provider: "LifeBridge AI Local Engine",
+      citations: ["LifeBridge Knowledge Base"],
+      disclaimer: "AI guidance may contain mistakes. Verify important decisions.",
+      status: "fallback",
+    };
+  }
+}
+
 

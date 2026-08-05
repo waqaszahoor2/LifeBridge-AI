@@ -7,12 +7,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 CENTRAL_ENV = PROJECT_ROOT / "config" / "apis.env"
+API_ENV = PROJECT_ROOT / "apps" / "api" / ".env"
 LOCAL_ENV = BACKEND_ROOT / ".env"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(str(CENTRAL_ENV), str(LOCAL_ENV)),
+        env_file=(str(CENTRAL_ENV), str(API_ENV), str(LOCAL_ENV)),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -34,6 +35,10 @@ class Settings(BaseSettings):
     enable_scheduler: bool = False
     enable_demo_seed: bool = True
     log_level: str = "INFO"
+
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.1-8b-instant"
+
 
     nasa_eonet_enabled: bool = True
     gdacs_enabled: bool = True

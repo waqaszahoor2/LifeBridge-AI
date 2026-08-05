@@ -216,3 +216,25 @@ export interface MentorChatResponse {
   disclaimer: string;
 }
 
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface AssistantChatRequest {
+  messages: ChatMessage[];
+  roadmap_id?: string;
+  temperature?: number;
+  max_tokens?: number;
+}
+
+export interface AssistantChatResponse {
+  reply: string;
+  model_used: string;
+  provider: string;
+  citations: string[];
+  disclaimer: string;
+  status: string;
+}
+
+

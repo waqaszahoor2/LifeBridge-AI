@@ -382,3 +382,25 @@ class ProgressUpdateRequest(BaseModel):
     github_url: str | None = None
     demo_url: str | None = None
 
+
+class ChatMessage(BaseModel):
+    role: Literal["system", "user", "assistant"]
+    content: str = Field(min_length=1, max_length=10000)
+
+
+class AssistantChatRequest(BaseModel):
+    messages: list[ChatMessage] = Field(min_length=1, max_length=50)
+    roadmap_id: str | None = None
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    max_tokens: int = Field(default=1024, ge=1, le=4096)
+
+
+class AssistantChatResponse(BaseModel):
+    reply: str
+    model_used: str
+    provider: str
+    citations: list[str] = Field(default_factory=list)
+    disclaimer: str = "AI guidance may contain mistakes. Verify important decisions."
+    status: str = "success"
+
+
