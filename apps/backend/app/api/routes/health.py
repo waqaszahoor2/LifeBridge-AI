@@ -28,3 +28,13 @@ def readiness(db: Session = Depends(get_db)):
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Database is not ready") from exc
     return {"status": "ready", "database": "ok", "timestamp": datetime.now(UTC).isoformat()}
+
+
+@router.get("/build-info")
+def build_info():
+    return {
+        "version": "1.1.0",
+        "commit": "a45bcda",
+        "environment": settings.app_env,
+        "built_at": datetime.now(UTC).isoformat(),
+    }

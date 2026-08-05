@@ -22,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [unreadCount, setUnreadCountState] = useState<number>(2);
+  const [unreadCount, setUnreadCountState] = useState<number>(0);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (email: string, name?: string) => {
-    const displayName = name || email.split("@")[0] || "Demo User";
+    const displayName = name || email.split("@")[0] || "Local Demo Profile";
     const profile: UserProfile = {
       name: displayName,
       email: email,

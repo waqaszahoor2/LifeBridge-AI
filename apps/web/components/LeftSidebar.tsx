@@ -12,11 +12,16 @@ export function LeftSidebar() {
     studyLevel: "General Access",
     field: "Platform Skills",
   });
-  const [savedCount, setSavedCount] = useState<number>(3);
+  const [savedCount, setSavedCount] = useState<number>(0);
+  const [completeness, setCompleteness] = useState<number>(25);
 
   useEffect(() => {
     const savedProf = getStoredProfile();
     if (savedProf) {
+      const filledFields = [savedProf.country, savedProf.study_level, savedProf.field_of_study, savedProf.skills?.length].filter(Boolean).length;
+      const calc = Math.min(100, Math.round((filledFields / 4) * 100));
+      setCompleteness(calc > 0 ? calc : 25);
+
       setProfile((prev) => ({
         ...prev,
         country: savedProf.country || prev.country,
@@ -30,8 +35,10 @@ export function LeftSidebar() {
         const parsed = JSON.parse(storedSaved);
         if (Array.isArray(parsed)) setSavedCount(parsed.length);
       } catch {
-        // Fallback
+        setSavedCount(0);
       }
+    } else {
+      setSavedCount(0);
     }
   }, []);
 
@@ -42,7 +49,7 @@ export function LeftSidebar() {
         <div className="profile-banner-bg" />
         <div className="profile-avatar-wrap">
           <div className="profile-avatar-placeholder" aria-hidden="true">
-            WZ
+            {profile.name ? profile.name.slice(0, 2).toUpperCase() : "GU"}
           </div>
         </div>
         <div className="profile-info-block">
@@ -59,10 +66,10 @@ export function LeftSidebar() {
         <div className="profile-stats-rows">
           <div className="stat-row">
             <span className="stat-label">Profile Completeness</span>
-            <span className="stat-value text-teal">85%</span>
+            <span className="stat-value text-teal">{completeness}%</span>
           </div>
           <div className="completeness-bar-bg">
-            <div className="completeness-bar-fill" style={{ width: "85%" }} />
+            <div className="completeness-bar-fill" style={{ width: `${completeness}%` }} />
           </div>
 
           <div className="stat-row mt-2">
@@ -103,6 +110,9 @@ export function LeftSidebar() {
             </Link>
           </li>
         </ul>
+        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 text-center">
+          LifeBridge AI v1.0.0 (Build: <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">a45bcda</code>)
+        </div>
       </div>
     </aside>
   );
