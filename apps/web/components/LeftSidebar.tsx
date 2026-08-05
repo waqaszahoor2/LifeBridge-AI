@@ -6,11 +6,11 @@ import { getStoredProfile } from "@/lib/profile";
 
 export function LeftSidebar() {
   const [profile, setProfile] = useState({
-    name: "Waqas Zahoor",
-    title: "Data Scientist & AI Researcher",
-    country: "Pakistan 🇵🇰",
-    studyLevel: "Master's Degree",
-    field: "Computer Science & AI",
+    name: "Guest User",
+    title: "Local Demo Profile — not a secure account",
+    country: "Demonstration Mode",
+    studyLevel: "General Access",
+    field: "Platform Skills",
   });
   const [savedCount, setSavedCount] = useState<number>(3);
 

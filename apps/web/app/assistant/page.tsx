@@ -38,6 +38,7 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [optInSaveHistory, setOptInSaveHistory] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [healthStatus, setHealthStatus] = useState<{ isReady: boolean; provider: string }>({ isReady: false, provider: "Checking..." });
   
@@ -81,24 +82,24 @@ export default function AssistantPage() {
         sender: "assistant",
         text: "Hello! I am LifeBridge AI Assistant. Ask me about exploring opportunities, generating practical skill roadmaps, verifying suspicious content, or navigating platform tools.",
         modelUsed: "llama-3.1-8b-instant",
-        provider: "local_demo",
-        status: "fallback",
+        provider: "system",
+        status: "information",
         disclaimer: "AI-generated guidance. Verify important information independently.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
   }, []);
 
-  // Save history
+  // Save history only if opt-in enabled
   useEffect(() => {
-    if (typeof window !== "undefined" && messages.length > 0) {
+    if (typeof window !== "undefined" && messages.length > 0 && optInSaveHistory) {
       try {
         localStorage.setItem("lifebridge_assistant_history", JSON.stringify(messages));
       } catch {
         // Ignore
       }
     }
-  }, [messages]);
+  }, [messages, optInSaveHistory]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -113,8 +114,8 @@ export default function AssistantPage() {
           ? "Welcome to AI Skill Coach! Tell me what skill or career role you want to learn, and I will build a step-by-step practical roadmap."
           : "Hello! How can I assist you on LifeBridge AI today?",
         modelUsed: "llama-3.1-8b-instant",
-        provider: healthStatus.isReady ? "groq" : "local_demo",
-        status: healthStatus.isReady ? "success" : "fallback",
+        provider: "system",
+        status: "information",
         disclaimer: "AI-generated guidance. Verify important information independently.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
@@ -386,15 +387,17 @@ export default function AssistantPage() {
                     ) : (
                       <>
                         <Icon name="sparkles" size={12} className="text-primary-400" />
-                        {/* Provider Badge Requirement */}
-                        {m.provider === "groq" ? (
-                          <span className="text-emerald-500 font-bold">Groq Live</span>
+                        {/* Provider Badge Priority: 1. Stopped, 2. Error, 3. Groq, 4. Local Demo, 5. System */}
+                        {m.status === "stopped" ? (
+                          <span className="text-slate-400 font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Stopped</span>
+                        ) : m.status === "error" || m.provider === "failed" ? (
+                          <span className="text-rose-500 font-semibold px-1.5 py-0.5 rounded bg-rose-500/10">Failed</span>
+                        ) : m.provider === "groq" ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-500/10">Groq Live</span>
                         ) : m.provider === "local_demo" ? (
-                          <span className="text-amber-500 font-semibold">Offline Demo</span>
-                        ) : m.status === "stopped" ? (
-                          <span className="text-slate-400 font-semibold">Stopped</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold px-1.5 py-0.5 rounded bg-amber-500/10">Offline Demo</span>
                         ) : (
-                          <span className="text-rose-500 font-semibold">Failed</span>
+                          <span className="text-indigo-600 dark:text-indigo-400 font-semibold px-1.5 py-0.5 rounded bg-indigo-500/10">System Message</span>
                         )}
                       </>
                     )}

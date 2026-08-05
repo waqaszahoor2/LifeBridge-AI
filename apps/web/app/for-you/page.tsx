@@ -364,26 +364,25 @@ function ForYouFeedContent() {
           </div>
         </div>
 
-        {/* Top Urgent Emergency Alert Banner (from design-reference.png) */}
+        {/* Top Urgent Emergency Alert Banner (Demonstration Alert) */}
         <div className="lb-urgent-alert-banner" role="alert">
-
           <div className="urgent-banner-left">
             <div className="urgent-icon-circle">
               <Icon name="alert" size={20} className="text-red" />
             </div>
             <div className="urgent-text-content">
               <div className="urgent-header-row">
-                <span className="urgent-label-red">URGENT FLOOD ALERT</span>
-                <span className="urgent-badge-high">High Risk</span>
+                <span className="urgent-label-red">DEMONSTRATION ALERT</span>
+                <span className="urgent-badge-high">Sample Notice</span>
               </div>
               <p className="urgent-message-body">
-                Heavy rainfall causing severe flooding in parts of Assam and Bihar. Stay indoors if possible. Follow local instructions and stay safe.
+                This is a platform demonstration alert layout. Real emergency bulletins are sourced directly from verified regional disaster APIs.
               </p>
               <div className="urgent-footer-row">
                 <a href="/disasters" className="urgent-action-link">
-                  View Affected Areas &gt;
+                  View Disaster Bulletin Directory &gt;
                 </a>
-                <span className="urgent-source-meta">Source: IMD • 20 mins ago</span>
+                <span className="urgent-source-meta">Source: Platform System • Verified Demo Notice</span>
               </div>
             </div>
           </div>
@@ -431,7 +430,7 @@ function ForYouFeedContent() {
             {/* Offline Notification */}
             {isOffline && (
               <div className="offline-notice-banner" role="status">
-                📡 Connected to offline verified cache mode.
+                📡 Live data is unavailable. Showing demonstration content.
               </div>
             )}
 

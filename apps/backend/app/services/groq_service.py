@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generator, List, Optional
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -22,19 +22,11 @@ GUARDRAILS:
 3. Never fabricate unverified course certificates or job guarantees."""
 
 
-def call_groq_chat(
+def format_messages_for_groq(
     messages: List[Dict[str, str]],
     mode: str = "lifebridge_assistant",
-    temperature: float = 0.7,
-    max_tokens: int = 1024,
     roadmap_context: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Executes a multi-turn chat completion using Groq AI (llama-3.1-8b-instant) with explicit status and provider metadata."""
-    settings = get_settings()
-    api_key = settings.groq_api_key.strip()
-    model = settings.groq_model or "llama-3.1-8b-instant"
-    conversation_id = f"conv_{uuid.uuid4().hex[:12]}"
-
+) -> List[Dict[str, str]]:
     base_prompt = SKILL_COACH_SYSTEM_PROMPT if mode == "skill_coach" else ASSISTANT_SYSTEM_PROMPT
     if roadmap_context:
         base_prompt += f"\n\nCurrent Roadmap Context: {roadmap_context}"
@@ -50,7 +42,23 @@ def call_groq_chat(
         if role in ["system", "user", "assistant"] and content:
             formatted_messages.append({"role": role, "content": content})
 
-    # Check if a real Groq API key is configured
+    return formatted_messages
+
+
+def call_groq_chat(
+    messages: List[Dict[str, str]],
+    mode: str = "lifebridge_assistant",
+    temperature: float = 0.7,
+    max_tokens: int = 1024,
+    roadmap_context: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Executes a multi-turn chat completion using Groq AI (llama-3.1-8b-instant)."""
+    settings = get_settings()
+    api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
+    model = settings.groq_model or "llama-3.1-8b-instant"
+    conversation_id = f"conv_{uuid.uuid4().hex[:12]}"
+
+    formatted_messages = format_messages_for_groq(messages, mode, roadmap_context)
     is_groq_configured = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
 
     if is_groq_configured:
@@ -80,9 +88,9 @@ def call_groq_chat(
             logger.error(f"Groq API provider execution error: {err}")
             raise Exception("Groq API request failed. Check server configuration or network connectivity.")
 
-    # Explicit Demo Mode fallback (when GROQ_API_KEY is not configured)
+    # Local Demo Mode fallback (when GROQ_API_KEY is not configured)
     last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-    fallback_reply = generate_generic_demo_response(last_user_msg, mode)
+    fallback_reply = generate_generic_demo_response(last_user_msg)
     return {
         "message": {"role": "assistant", "content": fallback_reply},
         "reply": fallback_reply,
@@ -96,14 +104,58 @@ def call_groq_chat(
     }
 
 
-def generate_generic_demo_response(user_query: str, mode: str) -> str:
-    """Generic fallback engine for unconfigured local demo mode (no test-specific hardcoded responses)."""
-    q = user_query.lower()
-    if "disaster" in q or "emergency" in q or "flood" in q or "fire" in q:
-        return (
-            "⚠️ **Emergency Notice**: If you are experiencing an immediate life-threatening emergency or natural disaster, "
-            "please contact official local emergency services immediately."
+def stream_groq_chat(
+    messages: List[Dict[str, str]],
+    mode: str = "lifebridge_assistant",
+    temperature: float = 0.7,
+    max_tokens: int = 1024,
+    roadmap_context: Optional[str] = None,
+) -> Generator[Dict[str, Any], None, None]:
+    """Generates genuine real-time Groq tokens directly using client.chat.completions.create(stream=True)."""
+    settings = get_settings()
+    api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
+    model = settings.groq_model or "llama-3.1-8b-instant"
+
+    formatted_messages = format_messages_for_groq(messages, mode, roadmap_context)
+    is_groq_configured = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
+
+    if not is_groq_configured:
+        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine"}
+        last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
+        demo_reply = generate_generic_demo_response(last_user_msg)
+        yield {"type": "token", "content": demo_reply}
+        yield {"type": "done"}
+        return
+
+    try:
+        from groq import Groq
+
+        client = Groq(api_key=api_key)
+        completion = client.chat.completions.create(
+            model=model,
+            messages=formatted_messages,
+            temperature=min(max(temperature, 0.0), 1.0),
+            max_tokens=max_tokens,
+            stream=True,
         )
+
+        yield {"type": "meta", "provider": "groq", "status": "success", "model": model}
+
+        for chunk in completion:
+            if chunk.choices and len(chunk.choices) > 0:
+                delta = chunk.choices[0].delta
+                token = delta.content if delta and hasattr(delta, "content") else None
+                if token:
+                    yield {"type": "token", "content": token}
+
+        yield {"type": "done"}
+
+    except Exception as err:
+        logger.error(f"Groq streaming error: {err}")
+        yield {"type": "error", "message": "The live Groq AI assistant stream encountered an error."}
+
+
+def generate_generic_demo_response(user_query: str) -> str:
     return (
         f"[Local Demo Mode] Regarding your query: '{user_query}'\n\n"
         "To enable live Groq AI completions (llama-3.1-8b-instant), please configure a valid `GROQ_API_KEY` in the FastAPI backend environment."

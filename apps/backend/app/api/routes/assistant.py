@@ -3,7 +3,7 @@ import logging
 import time
 import uuid
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import SkillRoadmap
-from app.schemas import AssistantChatRequest, AssistantChatResponse, AssistantHealthResponse, ChatMessage
-from app.services.groq_service import call_groq_chat
+from app.schemas import AssistantChatRequest, AssistantChatResponse, ChatMessage
+from app.services.groq_service import call_groq_chat, stream_groq_chat
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/assistant", tags=["assistant"])
@@ -21,6 +21,12 @@ router = APIRouter(prefix="/assistant", tags=["assistant"])
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_REQUESTS = 30
 request_history: Dict[str, List[float]] = defaultdict(list)
+
+# Provider verification cache
+LAST_VERIFIED_CACHE: Dict[str, Any] = {
+    "timestamp": 0,
+    "verified": False,
+}
 
 
 def get_client_ip(request: Request) -> str:
@@ -42,17 +48,37 @@ def check_rate_limit(client_ip: str):
     request_history[client_ip].append(now)
 
 
-@router.get("/health", response_model=AssistantHealthResponse)
+@router.get("/health")
 def assistant_health():
-    """Health check for assistant service configuration without exposing secrets."""
+    """Health check endpoint proving Groq provider configuration and cached verification."""
     settings = get_settings()
-    has_key = bool(settings.groq_api_key and settings.groq_api_key.strip() != "PASTE_KEY_HERE" and not settings.groq_api_key.startswith("your_"))
-    return AssistantHealthResponse(
-        status="ready" if has_key else "demo",
-        provider="groq" if has_key else "local_demo",
-        model_configured=bool(settings.groq_model),
-        api_key_configured=has_key,
-    )
+    api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
+    model = settings.groq_model or "llama-3.1-8b-instant"
+    has_key = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
+
+    now = time.time()
+    if has_key and (now - LAST_VERIFIED_CACHE["timestamp"] > 120):
+        try:
+            from groq import Groq
+
+            client = Groq(api_key=api_key)
+            # Lightweight verification
+            models_list = client.models.list()
+            LAST_VERIFIED_CACHE["verified"] = True
+            LAST_VERIFIED_CACHE["timestamp"] = now
+        except Exception as err:
+            logger.warning(f"Groq health check verification failed: {err}")
+            LAST_VERIFIED_CACHE["verified"] = False
+            LAST_VERIFIED_CACHE["timestamp"] = now
+
+    return {
+        "status": "ready" if (has_key and LAST_VERIFIED_CACHE["verified"]) else "demo",
+        "provider": "groq" if (has_key and LAST_VERIFIED_CACHE["verified"]) else "local_demo",
+        "configured": has_key,
+        "provider_verified": LAST_VERIFIED_CACHE["verified"] if has_key else False,
+        "model": model,
+        "last_verified_at": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(LAST_VERIFIED_CACHE["timestamp"])),
+    }
 
 
 @router.post("/chat", response_model=AssistantChatResponse)
@@ -106,8 +132,8 @@ def assistant_chat(payload: AssistantChatRequest, request: Request, db: Session 
 
 
 @router.post("/chat/stream")
-def assistant_chat_stream(payload: AssistantChatRequest, request: Request, db: Session = Depends(get_db)):
-    """Streaming response endpoint returning real-time SSE tokens."""
+async def assistant_chat_stream(payload: AssistantChatRequest, request: Request, db: Session = Depends(get_db)):
+    """Streaming response endpoint delivering real-time SSE tokens directly from Groq."""
     client_ip = get_client_ip(request)
     check_rate_limit(client_ip)
 
@@ -119,48 +145,35 @@ def assistant_chat_stream(payload: AssistantChatRequest, request: Request, db: S
 
     messages_data = [msg.model_dump() for msg in payload.messages]
 
-    def event_generator():
+    async def event_generator():
         try:
-            result = call_groq_chat(
+            stream = stream_groq_chat(
                 messages=messages_data,
                 mode=payload.mode,
                 temperature=payload.temperature,
                 max_tokens=payload.max_tokens,
                 roadmap_context=roadmap_context,
             )
-            reply_text = result.get("reply", "")
-            provider = result.get("provider", "groq")
-            status = result.get("status", "success")
 
-            # Stream metadata header
-            meta = {
-                "type": "meta",
-                "provider": provider,
-                "status": status,
-                "model": result.get("model", "llama-3.1-8b-instant"),
-                "citations": result.get("citations", []),
-            }
-            yield f"data: {json.dumps(meta)}\n\n"
-
-            # Stream text in progressive chunks
-            chunk_size = 15
-            for i in range(0, len(reply_text), chunk_size):
-                chunk = reply_text[i : i + chunk_size]
-                chunk_data = {"type": "token", "content": chunk}
-                yield f"data: {json.dumps(chunk_data)}\n\n"
-                time.sleep(0.02)
-
-            # Stream done signal
-            yield "data: {\"type\": \"done\"}\n\n"
+            for event in stream:
+                if await request.is_disconnected():
+                    logger.info("Client disconnected during SSE stream. Stopping Groq generator.")
+                    break
+                yield f"data: {json.dumps(event)}\n\n"
 
         except Exception as err:
             req_id = f"req_{uuid.uuid4().hex[:8]}"
-            logger.error(f"[Stream Req {req_id}] Error: {err}")
+            logger.error(f"[Stream Req {req_id}] Generator error: {err}")
             err_data = {
                 "type": "error",
-                "message": "The live AI assistant is temporarily unavailable.",
+                "message": "The live AI assistant stream is temporarily unavailable.",
                 "request_id": req_id,
             }
             yield f"data: {json.dumps(err_data)}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    headers = {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+    return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
