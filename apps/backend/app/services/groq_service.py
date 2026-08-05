@@ -17,7 +17,7 @@ GUARDRAILS:
 SKILL_COACH_SYSTEM_PROMPT = """You are AI Skill Coach on LifeBridge AI.
 Your purpose is to guide users through natural-language skill development, understanding their current experience level, available daily study time, building step-by-step practical roadmaps, suggesting AI tools and workflows, recommending portfolio projects, and testing understanding.
 GUARDRAILS:
-1. Maintain strong multi-turn context (e.g. if the user previously shared their skill goal or Python experience, reference it directly).
+1. Maintain strong multi-turn context across user messages.
 2. Keep recommendations practical and project-focused.
 3. Never fabricate unverified course certificates or job guarantees."""
 
@@ -29,7 +29,7 @@ def call_groq_chat(
     max_tokens: int = 1024,
     roadmap_context: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Executes a multi-turn chat completion using Groq AI (llama-3.1-8b-instant) with graceful fallback."""
+    """Executes a multi-turn chat completion using Groq AI (llama-3.1-8b-instant) with explicit status and provider metadata."""
     settings = get_settings()
     api_key = settings.groq_api_key.strip()
     model = settings.groq_model or "llama-3.1-8b-instant"
@@ -51,7 +51,9 @@ def call_groq_chat(
             formatted_messages.append({"role": role, "content": content})
 
     # Check if a real Groq API key is configured
-    if api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"):
+    is_groq_configured = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
+
+    if is_groq_configured:
         try:
             from groq import Groq
 
@@ -69,96 +71,40 @@ def call_groq_chat(
                 "model": model,
                 "model_used": model,
                 "conversation_id": conversation_id,
-                "provider": "Groq AI",
-                "citations": ["LifeBridge AI Knowledge Base", f"Groq {model} Inference Engine"],
-                "disclaimer": "AI guidance is for informational purposes. Verify important decisions.",
+                "provider": "groq",
+                "citations": [],
+                "disclaimer": "AI guidance is for informational purposes. Verify important decisions independently.",
                 "status": "success",
             }
         except Exception as err:
-            logger.warning(f"Groq API call error, using local intelligence engine: {err}")
+            logger.error(f"Groq API provider execution error: {err}")
+            raise Exception("Groq API request failed. Check server configuration or network connectivity.")
 
-    # Fallback contextual response engine
+    # Explicit Demo Mode fallback (when GROQ_API_KEY is not configured)
     last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-    fallback_reply = generate_fallback_response(last_user_msg, mode, messages)
+    fallback_reply = generate_generic_demo_response(last_user_msg, mode)
     return {
         "message": {"role": "assistant", "content": fallback_reply},
         "reply": fallback_reply,
-        "model": f"{model} (Offline Fallback)",
-        "model_used": f"{model} (Offline Fallback)",
+        "model": "local_demo_engine",
+        "model_used": "local_demo_engine",
         "conversation_id": conversation_id,
-        "provider": "LifeBridge Local Intelligence Engine",
-        "citations": ["LifeBridge Knowledge Base"],
-        "disclaimer": "The AI assistant server configuration is in demo mode. Add a valid GROQ_API_KEY for live Groq inference.",
+        "provider": "local_demo",
+        "citations": [],
+        "disclaimer": "Local Demo Mode: GROQ_API_KEY is not configured on the backend server.",
         "status": "fallback",
     }
 
 
-def generate_fallback_response(user_query: str, mode: str, history: List[Dict[str, str]]) -> str:
+def generate_generic_demo_response(user_query: str, mode: str) -> str:
+    """Generic fallback engine for unconfigured local demo mode (no test-specific hardcoded responses)."""
     q = user_query.lower()
-
-    # Multi-turn context awareness extraction across entire history
-    all_user_text = " ".join([m.get("content", "").lower() for m in history if m.get("role") == "user"])
-    knows_python = "python" in all_user_text
-    wants_ds = "data science" in all_user_text or "data scientist" in all_user_text
-    has_time = "hour" in all_user_text or "daily" in all_user_text or "time" in all_user_text
-
-    if mode == "skill_coach" or wants_ds:
-        if "python" in q and ("hour" in q or "daily" in q or has_time or wants_ds):
-            return (
-                "Excellent! With your foundation in basic Python and a dedicated 1-hour daily study routine for Data Science, "
-                "you can achieve job-ready fundamentals in 90 days.\n\n"
-                "📅 **90-Day Custom Learning Plan (1 hour/day)**:\n"
-                "• **Month 1 (Days 1-30)**: NumPy & Pandas Data Manipulation (30 mins learning, 30 mins code exercises).\n"
-                "• **Month 2 (Days 31-60)**: Exploratory Data Analysis & SQL (Matplotlib/Seaborn & PostgreSQL queries).\n"
-                "• **Month 3 (Days 61-90)**: Applied Machine Learning & Portfolio Project (scikit-learn classification model published to GitHub).\n\n"
-                "Would you like me to generate your specific Week 1 daily exercises or suggest a beginner portfolio project?"
-            )
-        elif "data science" in q or "data scientist" in q:
-            prefix = "Since you mentioned your interest in Data Science, " if wants_ds else ""
-            return (
-                f"{prefix}Data Science is a great career path! Here is your recommended 4-step roadmap:\n\n"
-                "1. **Python Fundamentals & Data Wrangling**: Master pandas, numpy, and Jupyter Notebooks.\n"
-                "2. **Exploratory Data Analysis & Viz**: Learn Matplotlib, Seaborn, and SQL queries.\n"
-                "3. **Applied Machine Learning**: Build classification and regression models using scikit-learn.\n"
-                "4. **AI-Assisted Portfolio Project**: Build a real-world prediction dashboard and publish to GitHub.\n\n"
-                "What is your current programming experience (e.g. Python, SQL, or beginner) and available daily study time?"
-            )
-        elif "python" in q:
-            return (
-                "Python is perfect for both beginner programmers and experienced engineers!\n\n"
-                "• **Week 1-2**: Variables, control loops, functions, lists & dictionaries.\n"
-                "• **Week 3-4**: Object-Oriented Programming (OOP) and Virtual Environments.\n"
-                "• **Week 5-8**: Choose specialization (FastAPI for Backend or pandas for Data Analytics).\n"
-                "What is your target study commitment per day?"
-            )
-
-        elif "project" in q or "portfolio" in q:
-            return (
-                "Great portfolio project ideas on LifeBridge AI:\n"
-                "1. **Scam Detector Web App**: Build a text classifier using scikit-learn.\n"
-                "2. **Job Match Recommender**: Build a FastAPI endpoint that matches CV skills against job postings.\n"
-                "3. **Disaster Risk Dashboard**: Visualize flood and weather risks using Open-Meteo API data."
-            )
-
     if "disaster" in q or "emergency" in q or "flood" in q or "fire" in q:
         return (
             "⚠️ **Emergency Notice**: If you are experiencing an immediate life-threatening emergency or natural disaster, "
-            "please immediately contact official local emergency services or national disaster response hotlines.\n\n"
-            "On LifeBridge AI, you can view active emergency alerts on the **Safety Alerts** page."
+            "please contact official local emergency services immediately."
         )
-    elif "scholarship" in q or "opportunity" in q or "job" in q:
-        return (
-            "You can explore verified jobs and scholarships on our **Opportunities** page. "
-            "Use filters to sort by funding type, study level, and location."
-        )
-    elif "trust" in q or "scam" in q:
-        return (
-            "Check suspicious links, SMS messages, or job offers using our **Trust Scanner** tool. "
-            "It analyzes risk signals and provides actionable safety recommendations."
-        )
-
     return (
-        f"I am here to assist you with LifeBridge AI! Regarding '{user_query}':\n\n"
-        "You can explore trusted opportunities, generate practical skill roadmaps, verify suspicious links with Trust Scanner, "
-        "and find nearby emergency services. How would you like to proceed?"
+        f"[Local Demo Mode] Regarding your query: '{user_query}'\n\n"
+        "To enable live Groq AI completions (llama-3.1-8b-instant), please configure a valid `GROQ_API_KEY` in the FastAPI backend environment."
     )

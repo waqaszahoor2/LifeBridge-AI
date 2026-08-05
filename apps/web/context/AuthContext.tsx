@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profile: UserProfile = {
       name: displayName,
       email: email,
-      role: "Platform Member",
+      role: "Local Demo Profile — not a secure account",
     };
     setUser(profile);
     setIsAuthenticated(true);

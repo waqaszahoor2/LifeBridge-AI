@@ -427,23 +427,72 @@ export async function sendMentorChatMessage(roadmapId: string, userMessage: stri
   }
 }
 
-export async function sendAssistantChat(req: AssistantChatRequest): Promise<AssistantChatResponse> {
-  try {
-    return await request<AssistantChatResponse>("/api/v1/assistant/chat", {
-      method: "POST",
-      body: JSON.stringify(req),
-    });
-  } catch {
-    const lastMsg = req.messages[req.messages.length - 1]?.content || "";
-    return {
-      reply: `LifeBridge AI Assistant:\n\nThank you for asking: "${lastMsg}".\n\nI can assist you with personalized skill roadmaps, job preparation, scholarship applications, emergency disaster updates, and safe online navigation.`,
-      model_used: "llama-3.1-8b-instant (Offline Demo)",
-      provider: "LifeBridge AI Local Engine",
-      citations: ["LifeBridge Knowledge Base"],
-      disclaimer: "AI guidance may contain mistakes. Verify important decisions.",
-      status: "fallback",
-    };
+export async function sendAssistantChat(req: AssistantChatRequest & { signal?: AbortSignal }): Promise<AssistantChatResponse> {
+  const { signal, ...payload } = req;
+  return request<AssistantChatResponse>("/api/v1/assistant/chat", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    signal,
+  });
+}
+
+export async function streamAssistantChat(
+  req: AssistantChatRequest,
+  onToken: (token: string) => void,
+  onMeta?: (meta: { provider: string; status: string; model: string; citations: string[] }) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/assistant/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+    signal,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Streaming failed with status ${response.status}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body available for streaming");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const jsonStr = line.replace(/^data:\s*/, "").trim();
+        if (!jsonStr) continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          if (parsed.type === "meta" && onMeta) {
+            onMeta({
+              provider: parsed.provider,
+              status: parsed.status,
+              model: parsed.model,
+              citations: parsed.citations || [],
+            });
+          } else if (parsed.type === "token" && parsed.content) {
+            onToken(parsed.content);
+          } else if (parsed.type === "error") {
+            throw new Error(parsed.message || "Streaming provider error");
+          }
+        } catch (e) {
+          if (e instanceof Error && e.name === "AbortError") throw e;
+        }
+      }
+    }
   }
 }
+
 
 

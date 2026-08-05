@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { Icon } from "@/components/ui/Icon";
-import { sendAssistantChat } from "@/lib/api";
+import { sendAssistantChat, streamAssistantChat, API_BASE_URL } from "@/lib/api";
 import type { ChatMessage } from "@/lib/types";
 
 type AssistantMode = "lifebridge_assistant" | "skill_coach";
@@ -17,7 +17,8 @@ interface MessageUI {
   citations?: string[];
   disclaimer?: string;
   modelUsed?: string;
-  provider?: string;
+  provider?: string; // "groq" | "local_demo" | "failed" | "stopped"
+  status?: string; // "success" | "fallback" | "error" | "stopped"
   timestamp: string;
 }
 
@@ -25,10 +26,10 @@ const STARTER_QUESTIONS = [
   "Hello, what can you help me with?",
   "I want to learn data science.",
   "I know basic Python and can study one hour daily.",
+  "Create a five-step learning plan for Apache Airflow and explain one DAG scheduling mistake.",
   "Which AI tools should I learn?",
   "Explain how LifeBridge AI works",
   "Help me prepare for a scholarship",
-  "Suggest a portfolio project",
 ];
 
 export default function AssistantPage() {
@@ -38,13 +39,27 @@ export default function AssistantPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [healthStatus, setHealthStatus] = useState<{ isReady: boolean; provider: string }>({ isReady: false, provider: "Checking..." });
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const abortControllerRef = useRef<boolean>(false);
+  const activeAbortController = useRef<AbortController | null>(null);
 
-  // Load conversation history on mount
+  // Check health on mount
   useEffect(() => {
+    fetch(`${API_BASE_URL}/api/v1/assistant/health`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "ready" && data.api_key_configured) {
+          setHealthStatus({ isReady: true, provider: "Groq AI (llama-3.1-8b-instant)" });
+        } else {
+          setHealthStatus({ isReady: false, provider: "Local Demo Mode" });
+        }
+      })
+      .catch(() => {
+        setHealthStatus({ isReady: false, provider: "Offline / Service Error" });
+      });
+
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("lifebridge_assistant_history");
@@ -56,7 +71,7 @@ export default function AssistantPage() {
           }
         }
       } catch {
-        // Fallback to default initial message
+        // Fallback
       }
     }
 
@@ -64,22 +79,23 @@ export default function AssistantPage() {
       {
         id: "init_1",
         sender: "assistant",
-        text: "Hello! I am LifeBridge AI Assistant powered by Groq (llama-3.1-8b-instant).\n\nAsk me about exploring opportunities, generating practical skill roadmaps, verifying suspicious content, or navigating platform tools.",
+        text: "Hello! I am LifeBridge AI Assistant. Ask me about exploring opportunities, generating practical skill roadmaps, verifying suspicious content, or navigating platform tools.",
         modelUsed: "llama-3.1-8b-instant",
-        provider: "Groq AI",
-        disclaimer: "AI guidance is for informational purposes. Verify important decisions.",
+        provider: "local_demo",
+        status: "fallback",
+        disclaimer: "AI-generated guidance. Verify important information independently.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
   }, []);
 
-  // Save conversation history on change
+  // Save history
   useEffect(() => {
     if (typeof window !== "undefined" && messages.length > 0) {
       try {
         localStorage.setItem("lifebridge_assistant_history", JSON.stringify(messages));
       } catch {
-        // Ignore storage overflow
+        // Ignore
       }
     }
   }, [messages]);
@@ -97,8 +113,9 @@ export default function AssistantPage() {
           ? "Welcome to AI Skill Coach! Tell me what skill or career role you want to learn, and I will build a step-by-step practical roadmap."
           : "Hello! How can I assist you on LifeBridge AI today?",
         modelUsed: "llama-3.1-8b-instant",
-        provider: "Groq AI",
-        disclaimer: "AI guidance is for informational purposes. Verify important decisions.",
+        provider: healthStatus.isReady ? "groq" : "local_demo",
+        status: healthStatus.isReady ? "success" : "fallback",
+        disclaimer: "AI-generated guidance. Verify important information independently.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ];
@@ -128,7 +145,10 @@ export default function AssistantPage() {
 
     setInput("");
     setErrorMsg(null);
-    abortControllerRef.current = false;
+
+    // Create new AbortController
+    const controller = new AbortController();
+    activeAbortController.current = controller;
 
     const userMsgId = `user_${Date.now()}`;
     const userMsg: MessageUI = {
@@ -147,74 +167,90 @@ export default function AssistantPage() {
       content: m.text,
     }));
 
+    const assistantMsgId = `asst_${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMsgId,
+        sender: "assistant",
+        text: "",
+        isStreaming: true,
+        provider: healthStatus.isReady ? "groq" : "local_demo",
+        status: "success",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+
     try {
-      const res = await sendAssistantChat({
-        messages: apiMessages,
-        mode: mode,
-        temperature: 0.7,
-        max_tokens: 1024,
-      });
-
-      if (abortControllerRef.current) return;
-
-      const fullReply = res.reply || res.message?.content || "";
-      const assistantMsgId = `asst_${Date.now()}`;
-
-      // Simulate streaming typewriter effect
-      setMessages((prev) => [
-        ...prev,
+      let accumulatedText = "";
+      await streamAssistantChat(
         {
-          id: assistantMsgId,
-          sender: "assistant",
-          text: "",
-          isStreaming: true,
-          citations: res.citations,
-          disclaimer: res.disclaimer,
-          modelUsed: res.model_used || res.model,
-          provider: res.provider,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          messages: apiMessages,
+          mode: mode,
+          temperature: 0.7,
+          max_tokens: 1024,
         },
-      ]);
-
-      let charIdx = 0;
-      const speed = fullReply.length > 500 ? 5 : 12;
-      const interval = setInterval(() => {
-        if (abortControllerRef.current) {
-          clearInterval(interval);
+        (token) => {
+          accumulatedText += token;
           setMessages((prev) =>
-            prev.map((m) => (m.id === assistantMsgId ? { ...m, isStreaming: false } : m))
+            prev.map((m) => (m.id === assistantMsgId ? { ...m, text: accumulatedText } : m))
           );
-          setLoading(false);
-          return;
-        }
-
-        charIdx += 3;
-        const currentSlice = fullReply.slice(0, charIdx);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMsgId ? { ...m, text: currentSlice } : m
-          )
-        );
-
-        if (charIdx >= fullReply.length) {
-          clearInterval(interval);
+        },
+        (meta) => {
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantMsgId ? { ...m, text: fullReply, isStreaming: false } : m
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    provider: meta.provider,
+                    status: meta.status,
+                    modelUsed: meta.model,
+                    citations: meta.citations,
+                  }
+                : m
             )
           );
-          setLoading(false);
-        }
-      }, speed);
+        },
+        controller.signal
+      );
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === assistantMsgId ? { ...m, isStreaming: false } : m))
+      );
+      setLoading(false);
     } catch (err: any) {
       setLoading(false);
-      const msg = err?.message || "Failed to connect to the assistant backend. Please check connection and try again.";
-      setErrorMsg(msg);
+      if (err?.name === "AbortError") {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId ? { ...m, status: "stopped", isStreaming: false } : m
+          )
+        );
+        return;
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? {
+                ...m,
+                status: "error",
+                provider: "failed",
+                text: "The live AI assistant is temporarily unavailable.",
+                isStreaming: false,
+              }
+            : m
+        )
+      );
+      setErrorMsg("The live AI assistant is temporarily unavailable.");
     }
   }
 
   function handleStopGenerating() {
-    abortControllerRef.current = true;
+    if (activeAbortController.current) {
+      activeAbortController.current.abort();
+      activeAbortController.current = null;
+    }
     setLoading(false);
   }
 
@@ -239,7 +275,7 @@ export default function AssistantPage() {
   }
 
   return (
-    <AppShell pageTitle="AI Assistant" pageSubtitle="Interactive ChatGPT-style guidance powered by Groq (llama-3.1-8b-instant).">
+    <AppShell pageTitle="AI Assistant" pageSubtitle="Interactive ChatGPT-style guidance with real-time Groq stream completion.">
       <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col h-[calc(100vh-7rem)]">
         {/* Header Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
@@ -258,8 +294,12 @@ export default function AssistantPage() {
             <div>
               <h1 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 LifeBridge AI Assistant
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 font-semibold border border-primary-500/20">
-                  Groq Llama-3.1
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                  healthStatus.isReady
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                }`}>
+                  {healthStatus.provider}
                 </span>
               </h1>
             </div>
@@ -346,7 +386,16 @@ export default function AssistantPage() {
                     ) : (
                       <>
                         <Icon name="sparkles" size={12} className="text-primary-400" />
-                        {m.provider || "Groq AI"}
+                        {/* Provider Badge Requirement */}
+                        {m.provider === "groq" ? (
+                          <span className="text-emerald-500 font-bold">Groq Live</span>
+                        ) : m.provider === "local_demo" ? (
+                          <span className="text-amber-500 font-semibold">Offline Demo</span>
+                        ) : m.status === "stopped" ? (
+                          <span className="text-slate-400 font-semibold">Stopped</span>
+                        ) : (
+                          <span className="text-rose-500 font-semibold">Failed</span>
+                        )}
                       </>
                     )}
                   </span>
@@ -366,7 +415,7 @@ export default function AssistantPage() {
                       {m.citations && m.citations.some((c) => c.startsWith("http")) ? (
                         <span>Sources: {m.citations.join(" • ")}</span>
                       ) : (
-                        <span className="italic">AI-generated guidance</span>
+                        <span className="italic text-slate-400">AI-generated guidance. Verify important information independently.</span>
                       )}
                     </div>
                     <button
@@ -380,22 +429,19 @@ export default function AssistantPage() {
                   </div>
                 )}
               </div>
-              {m.disclaimer && (
-                <span className="text-[10px] text-slate-400 mt-1 px-1">{m.disclaimer}</span>
-              )}
             </div>
           ))}
 
           {loading && (
-            <div className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
+            <div className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit shadow-sm">
               <Icon name="refresh" size={16} className="animate-spin text-primary-500" />
               <span className="text-xs text-slate-600 dark:text-slate-300">
-                Generating response with Groq Llama-3.1…
+                Streaming response tokens from {healthStatus.isReady ? "Groq Live" : "Local Demo Mode"}…
               </span>
               <button
                 type="button"
                 onClick={handleStopGenerating}
-                className="ml-4 text-xs text-rose-500 hover:underline font-semibold"
+                className="ml-4 px-3 py-1 text-xs text-rose-500 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 font-semibold transition-colors"
               >
                 Stop Generating
               </button>
@@ -430,7 +476,7 @@ export default function AssistantPage() {
               onKeyDown={handleKeyDown}
               placeholder={
                 mode === "skill_coach"
-                  ? "Tell AI Skill Coach what skill or career you want to learn (e.g. 'I want to learn Data Science with Python')..."
+                  ? "Tell AI Skill Coach what skill or career you want to learn (e.g. 'I want to learn Apache Airflow')..."
                   : "Ask LifeBridge AI Assistant anything (Enter to send, Shift+Enter for newline)..."
               }
               className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 resize-none focus:outline-none px-2 py-1"
