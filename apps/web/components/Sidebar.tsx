@@ -89,21 +89,22 @@ export function Sidebar() {
       </div>
 
       {/* Footer Navigation Options */}
-      <div className="sidebar-footer-links">
+      <div className="sidebar-footer-links space-y-1">
         <Link href="/settings" className={`footer-link ${pathname === "/settings" ? "active" : ""}`}>
           <Icon name="settings" size={16} />
           <span>Settings</span>
         </Link>
-        <Link href="/about" className={`footer-link ${pathname === "/about" ? "active" : ""}`}>
+        <Link href="/help" className={`footer-link ${pathname === "/help" ? "active" : ""}`}>
           <Icon name="help" size={16} />
           <span>Help & Support</span>
         </Link>
-        <Link href="/login" className="footer-link logout-link">
-          <Icon name="logout" size={16} />
-          <span>Log Out</span>
+        <Link href="/privacy" className={`footer-link ${pathname === "/privacy" ? "active" : ""}`}>
+          <Icon name="shield" size={16} />
+          <span>Privacy & Terms</span>
         </Link>
       </div>
     </aside>
   );
 }
+
 
