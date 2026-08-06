@@ -21,8 +21,8 @@ export function AppShell({
   isRefreshing?: boolean;
 }) {
   return (
-    <div className="min-h-screen flex bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans antialiased">
-      {/* Permanent Left Navigation Sidebar on Desktop */}
+    <div className="min-h-screen flex bg-[#f3f7fb] dark:bg-[#08111e] text-slate-900 dark:text-white font-sans antialiased">
+      {/* Permanent Left Navigation Sidebar on Desktop (Width 250px) */}
       <div className="hidden lg:block shrink-0">
         <Sidebar />
       </div>
@@ -35,7 +35,7 @@ export function AppShell({
           onRefresh={onRefresh}
           isRefreshing={isRefreshing}
         />
-        <main id="main-content" className="flex-1 w-full max-w-[1500px] mx-auto px-4 sm:px-6 py-6 pb-24 sm:pb-12">
+        <main id="main-content" className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 py-6 pb-24 sm:pb-12">
           {children}
         </main>
         <AppFooter />

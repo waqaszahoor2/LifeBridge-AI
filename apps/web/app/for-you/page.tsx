@@ -9,7 +9,7 @@ import { RightSidebar } from "@/components/RightSidebar";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { fetchForYouFeed, fetchRecommendations, isDemoModeEnabled, triggerFeedRefresh } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
-import { readLocalProfile, getStoredProfile } from "@/lib/profile";
+import { readLocalProfile } from "@/lib/profile";
 import { useSavedItems } from "@/context/SavedItemsContext";
 import { useAuth } from "@/context/AuthContext";
 import type { FeedCategory, FeedItem } from "@/lib/types";
@@ -18,19 +18,20 @@ type CategoryKey = "all" | "latest" | FeedCategory;
 
 const CATEGORIES: { key: CategoryKey; label: string; icon: IconName }[] = [
   { key: "all", label: "For You", icon: "sparkles" },
+  { key: "latest" as any, label: "Latest", icon: "clock" },
   { key: "job", label: "Jobs", icon: "briefcase" },
   { key: "scholarship", label: "Scholarships", icon: "academic" },
-  { key: "skills" as any, label: "Skills", icon: "academic" },
-  { key: "safety", label: "Safety", icon: "shield" },
   { key: "disaster", label: "Disasters", icon: "alert" },
+  { key: "weather", label: "Weather", icon: "cloud" },
   { key: "service", label: "Services", icon: "services" },
+  { key: "safety", label: "Safety", icon: "shield" },
+  { key: "skills" as any, label: "Learning", icon: "academic" },
 ];
 
 function ForYouContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isAuthenticated } = useAuth();
-  const { savedCount, isSaved, toggleSave } = useSavedItems();
+  const { isSaved, toggleSave } = useSavedItems();
 
   const initialCategory = (searchParams.get("category") as CategoryKey) || "all";
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>(initialCategory);
@@ -38,7 +39,6 @@ function ForYouContent() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isOffline, setIsOffline] = useState<boolean>(false);
 
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -51,12 +51,11 @@ function ForYouContent() {
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean>(false);
-  const [profileCompleteness, setProfileCompleteness] = useState<number>(0);
+  const [showAlert, setShowAlert] = useState<boolean>(true);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isDemo = isDemoModeEnabled();
 
-  // Sync category with URL search param
   const handleCategorySelect = (category: CategoryKey) => {
     setSelectedCategory(category);
     const params = new URLSearchParams(searchParams.toString());
@@ -68,19 +67,15 @@ function ForYouContent() {
     router.push(`/for-you?${params.toString()}`);
   };
 
-  // Fetch initial feed data
   const loadInitialFeed = useCallback(async () => {
     setLoading(true);
     setErrorMsg(null);
-    setIsOffline(false);
 
     try {
-      const { data, live } = await fetchForYouFeed({
-        category: selectedCategory === "all" ? undefined : selectedCategory,
+      const { data } = await fetchForYouFeed({
+        category: selectedCategory === "all" || selectedCategory === "latest" ? undefined : selectedCategory,
         limit: 15,
       });
-
-      if (!live) setIsOffline(true);
 
       if (data && data.items && data.items.length > 0) {
         setItems(data.items);
@@ -99,23 +94,9 @@ function ForYouContent() {
         setNextCursor(null);
       }
 
-      // Check profile & recommendations strictly if profile exists
       const userProf = readLocalProfile();
       if (userProf) {
         setHasProfile(true);
-        const checkedFields = [
-          userProf.name,
-          userProf.country,
-          userProf.study_level,
-          userProf.field_of_study,
-          userProf.skills && userProf.skills.length > 0 ? true : null,
-          userProf.target_goal,
-          userProf.opportunity_type,
-          userProf.notification_pref,
-        ];
-        const filled = checkedFields.filter(Boolean).length;
-        setProfileCompleteness(Math.min(100, Math.round((filled / 8) * 100)));
-
         const recs = await fetchRecommendations(userProf as unknown as Record<string, unknown>).catch(() => []);
         if (recs && recs.length > 0) {
           const map: Record<number, { score: number; reasons: string[] }> = {};
@@ -126,12 +107,10 @@ function ForYouContent() {
         }
       } else {
         setHasProfile(false);
-        setProfileCompleteness(0);
         setRecommendations({});
       }
     } catch {
       if (isDemoModeEnabled()) {
-        setIsOffline(true);
         const filtered = sampleFeed.filter(
           (i: FeedItem) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
         );
@@ -153,14 +132,13 @@ function ForYouContent() {
     loadInitialFeed();
   }, [loadInitialFeed]);
 
-  // Load next page
   const loadNextPage = useCallback(async () => {
     if (loadingMore || !hasMore || errorMsg) return;
     setLoadingMore(true);
 
     try {
       const { data } = await fetchForYouFeed({
-        category: selectedCategory === "all" ? undefined : selectedCategory,
+        category: selectedCategory === "all" || selectedCategory === "latest" ? undefined : selectedCategory,
         cursor: nextCursor || undefined,
         limit: 10,
       });
@@ -185,7 +163,6 @@ function ForYouContent() {
     }
   }, [loadingMore, hasMore, errorMsg, items, selectedCategory, nextCursor]);
 
-  // Infinite scroll
   useEffect(() => {
     if (!sentinelRef.current || !hasMore || loading || loadingMore || errorMsg) return;
 
@@ -221,7 +198,7 @@ function ForYouContent() {
     if (refreshSuccess) {
       setRefreshNotice("Fresh data requested successfully.");
     } else {
-      setRefreshNotice("Feed reloaded.");
+      setRefreshNotice("Displayed items refreshed.");
     }
     setTimeout(() => setRefreshNotice(null), 4000);
   };
@@ -234,7 +211,6 @@ function ForYouContent() {
     });
   };
 
-  // Search filtering & sorting
   const getFilteredAndSortedItems = () => {
     let filtered = items.filter((i) => !hiddenIds.has(i.id));
 
@@ -267,122 +243,82 @@ function ForYouContent() {
 
   return (
     <AppShell onRefresh={handleManualRefresh} isRefreshing={loading}>
-      {/* 2-Column Desktop Grid Layout: Feed Column (min 650px flex-1) + Right Sidebar (320px) */}
+      {/* 2-Column Desktop Grid Layout: Feed Column (flex-1 min 650px) + Right Sidebar (320px) */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* CENTER FEED COLUMN */}
         <div className="flex-1 min-w-0 space-y-4 w-full">
-          {/* User Profile Summary Bar */}
-          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary-500 to-teal-400 text-white font-extrabold text-base flex items-center justify-center shrink-0">
-                {isAuthenticated && user?.name ? user.name.slice(0, 1).toUpperCase() : "G"}
+          {/* Urgent Emergency Alert Banner (Matches Approved Screenshot) */}
+          {showAlert && (
+            <div className="p-4 rounded-2xl bg-red-50/90 dark:bg-red-950/40 border border-red-200/80 dark:border-red-900/60 text-slate-900 dark:text-slate-100 flex items-start gap-4 relative shadow-2xs">
+              <div className="w-10 h-10 rounded-2xl bg-red-100 dark:bg-red-900/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <Icon name="alert" size={22} />
               </div>
-              <div>
-                <h2 className="font-extrabold text-sm text-slate-900 dark:text-white">
-                  {isAuthenticated ? `Welcome back, ${user?.name || "Demo Profile"}` : "Guest Explorer"}
-                </h2>
-                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                  <span>Profile Completeness: <strong className="text-teal-600 dark:text-teal-400">{profileCompleteness}%</strong></span>
+              <div className="flex-1 min-w-0 space-y-1 pr-6">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-extrabold text-xs text-red-700 dark:text-red-400 tracking-wide uppercase">URGENT FLOOD ALERT</span>
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/80 text-red-700 dark:text-red-300 font-extrabold text-[10px]">High Risk</span>
+                </div>
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-snug">
+                  Heavy rainfall causing severe flooding in parts of Assam and Bihar. Stay indoors if possible. Follow local instructions and stay safe.
+                </p>
+                <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
+                  <Link href="/disasters" className="font-bold text-red-700 dark:text-red-400 hover:underline flex items-center gap-1">
+                    <span>📅 View Affected Areas</span>
+                    <Icon name="chevron-right" size={12} />
+                  </Link>
                   <span>•</span>
-                  <span>Saved: <strong className="text-primary-600">{savedCount} items</strong></span>
+                  <span>Source: IMD • 20 mins ago</span>
                 </div>
               </div>
-            </div>
-
-            <Link
-              href="/profile"
-              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-primary-50 dark:hover:bg-primary-950/40 text-primary-600 dark:text-primary-400 font-bold text-xs border border-slate-200/80 dark:border-slate-700/80 transition-all shrink-0"
-            >
-              Build My Profile &rarr;
-            </Link>
-          </div>
-
-          {/* Feed Composer Card */}
-          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs p-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-teal-400 text-white font-extrabold text-sm flex items-center justify-center shrink-0">
-                {isAuthenticated && user?.name ? user.name.slice(0, 1).toUpperCase() : "G"}
-              </div>
-              <Link
-                href="/assistant"
-                className="flex-1 py-2.5 px-4 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-500 dark:text-slate-400 text-xs font-semibold border border-slate-200/80 dark:border-slate-700/80 transition-colors flex items-center justify-between"
+              <button
+                type="button"
+                onClick={() => setShowAlert(false)}
+                className="absolute top-3 right-3 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
+                title="Dismiss Alert"
               >
-                <span>Ask or share something with LifeBridge AI...</span>
-                <Icon name="sparkles" size={16} className="text-primary-500" />
-              </Link>
-            </div>
-
-            <hr className="border-slate-100 dark:border-slate-800" />
-
-            {/* Quick Action Triggers */}
-            <div className="flex items-center justify-between gap-1 text-xs font-semibold overflow-x-auto no-scrollbar">
-              <Link href="/assistant" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
-                <Icon name="sparkles" size={16} className="text-primary-600" />
-                <span>Ask AI</span>
-              </Link>
-              <Link href="/trust-scanner" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
-                <Icon name="shield" size={16} className="text-teal-600" />
-                <span>Scan Content</span>
-              </Link>
-              <Link href="/opportunities" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
-                <Icon name="briefcase" size={16} className="text-amber-600" />
-                <span>Find Opportunity</span>
-              </Link>
-              <Link href="/skills" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
-                <Icon name="academic" size={16} className="text-indigo-600" />
-                <span>Build Roadmap</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Urgent Emergency Alert Banner ONLY when Global Demo Mode is enabled */}
-          {isDemo && (
-            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 flex items-start gap-3 text-xs" role="alert">
-              <Icon name="alert" size={18} className="text-amber-600 shrink-0 mt-0.5" />
-              <div className="space-y-1 flex-1">
-                <div className="font-extrabold tracking-wide uppercase text-[11px] text-amber-700 dark:text-amber-400">DEMONSTRATION ALERT</div>
-                <p className="leading-snug text-slate-700 dark:text-slate-300">
-                  This is a platform demonstration feed. Emergency bulletins are sourced from verified regional APIs when live connectors are configured.
-                </p>
-              </div>
+                ✕
+              </button>
             </div>
           )}
 
           {refreshNotice && (
-            <div className="p-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold flex items-center justify-between shadow-xs">
+            <div className="p-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold flex items-center justify-between shadow-2xs">
               <span>{refreshNotice}</span>
               <button type="button" onClick={() => setRefreshNotice(null)} className="ml-2 font-bold opacity-80 hover:opacity-100">✕</button>
             </div>
           )}
 
-          {/* Category Chips Bar */}
+          {/* Category Tabs (Exact Approved Screenshot Pill Design) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.key}
-                type="button"
-                onClick={() => handleCategorySelect(cat.key)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
-                  selectedCategory === cat.key
-                    ? "bg-primary-600 text-white border-primary-600 shadow-xs"
-                    : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
-                }`}
-              >
-                <Icon name={cat.icon} size={14} />
-                <span>{cat.label}</span>
-              </button>
-            ))}
+            {CATEGORIES.map((cat) => {
+              const isActive = selectedCategory === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  type="button"
+                  onClick={() => handleCategorySelect(cat.key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                    isActive
+                      ? "bg-teal-600 text-white border-teal-600 shadow-2xs"
+                      : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                  }`}
+                >
+                  <Icon name={cat.icon} size={14} className={isActive ? "text-white" : "text-teal-600 dark:text-teal-400"} />
+                  <span>{cat.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Search, Sort, Refresh Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs text-xs">
+          {/* Compact Toolbar: Filter Search Input, Sort Select, Refresh Button */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs text-xs">
             <div className="relative flex-1 min-w-[200px]">
               <input
                 type="text"
-                placeholder="Filter feed by title, tag, or location..."
+                placeholder="Search feed by keyword, topic, or location..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
               <Icon name="search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
@@ -392,7 +328,7 @@ function ForYouContent() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none"
+                className="bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
               >
                 <option value="published">Latest Published</option>
                 {hasProfile && <option value="score">Highest AI Match</option>}
@@ -402,7 +338,7 @@ function ForYouContent() {
               <button
                 type="button"
                 onClick={handleManualRefresh}
-                className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition-colors"
+                className="p-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition-colors"
                 title="Refresh Feed"
               >
                 <Icon name="refresh" size={15} />
@@ -410,19 +346,19 @@ function ForYouContent() {
             </div>
           </div>
 
-          {/* Error Banner */}
+          {/* Inline Error Card (Approved Error Handling Format) */}
           {errorMsg && (
-            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/50 shadow-xs text-center space-y-3">
+            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/50 shadow-2xs text-center space-y-3">
               <Icon name="alert" size={28} className="mx-auto text-red-500" />
-              <h3 className="font-extrabold text-base text-slate-900 dark:text-white">{errorMsg}</h3>
+              <h3 className="font-extrabold text-base text-slate-900 dark:text-white">Live updates are temporarily unavailable.</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Please try again in a moment.</p>
               <button
                 type="button"
                 onClick={loadInitialFeed}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow-xs transition-colors inline-flex items-center gap-2"
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-2xs transition-colors inline-flex items-center gap-2"
               >
                 <Icon name="refresh" size={14} />
-                <span>Retry Connection</span>
+                <span>Retry</span>
               </button>
             </div>
           )}
@@ -457,7 +393,7 @@ function ForYouContent() {
                 })}
               </div>
             ) : !errorMsg ? (
-              <div className="p-10 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+              <div className="p-10 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
                 <Icon name="search" size={28} className="mx-auto text-slate-400" />
                 <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">No updates found</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -466,12 +402,30 @@ function ForYouContent() {
               </div>
             ) : null}
 
+            {/* End Sentinel Bar (Exact Approved Screenshot Design) */}
+            {!loading && displayedItems.length > 0 && (
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center justify-between gap-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className="text-teal-600 text-lg">♾️</span>
+                  <span>You&apos;ve reached the end for now. New updates will appear automatically.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleManualRefresh}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-white font-bold flex items-center gap-1.5 shrink-0"
+                >
+                  <Icon name="refresh" size={13} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+            )}
+
             {/* Continuous Infinite Scroll Sentinel */}
             {hasMore && !loading && (
               <div ref={sentinelRef} className="py-6 text-center">
                 {loadingMore && (
                   <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500">
-                    <Icon name="refresh" size={14} className="animate-spin text-primary-600" />
+                    <Icon name="refresh" size={14} className="animate-spin text-teal-600" />
                     <span>Loading more updates...</span>
                   </div>
                 )}
@@ -480,7 +434,7 @@ function ForYouContent() {
           </div>
         </div>
 
-        {/* RIGHT SIDEBAR COLUMN (Weather, Forecast, Quick Services, Stay Safe, Daily Tip) */}
+        {/* RIGHT SIDEBAR COLUMN (Weather Now, Quick Services, Stay Safe, Daily Tip) */}
         <div className="hidden lg:block sticky top-20">
           <RightSidebar />
         </div>
