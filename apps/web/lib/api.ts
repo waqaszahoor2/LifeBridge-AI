@@ -339,6 +339,17 @@ export async function sendAssistantChat(req: AssistantChatRequest & { signal?: A
   });
 }
 
+export class AssistantStreamError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public requestId?: string
+  ) {
+    super(message);
+    this.name = "AssistantStreamError";
+  }
+}
+
 export async function streamAssistantChat(
   req: AssistantChatRequest,
   onToken: (token: string) => void,
@@ -354,16 +365,24 @@ export async function streamAssistantChat(
   });
 
   if (!response.ok) {
-    throw new Error(`Streaming request failed with HTTP ${response.status}`);
+    throw new AssistantStreamError(
+      "HTTP_ERROR",
+      `Streaming request failed with HTTP ${response.status}`
+    );
   }
 
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.includes("text/event-stream")) {
-    throw new Error(`Invalid SSE content type received: ${contentType}`);
+    throw new AssistantStreamError(
+      "INVALID_CONTENT_TYPE",
+      `Invalid SSE content type received: ${contentType}`
+    );
   }
 
   const reader = response.body?.getReader();
-  if (!reader) throw new Error("No readable response body for SSE streaming");
+  if (!reader) {
+    throw new AssistantStreamError("NO_BODY", "No readable response body for SSE streaming");
+  }
 
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
@@ -392,7 +411,11 @@ export async function streamAssistantChat(
         }
 
         if (parsed.type === "error") {
-          throw new Error(parsed.message || "Streaming provider error encountered");
+          throw new AssistantStreamError(
+            parsed.code || "STREAM_ERROR",
+            parsed.message || "The live AI assistant stream is temporarily unavailable.",
+            parsed.request_id
+          );
         }
 
         if (parsed.type === "meta") {
@@ -421,10 +444,16 @@ export async function streamAssistantChat(
         try {
           parsed = JSON.parse(jsonStr);
         } catch {
-          // ignore
+          // ignore malformed final buffer JSON
         }
         if (parsed) {
-          if (parsed.type === "error") throw new Error(parsed.message || "Streaming provider error");
+          if (parsed.type === "error") {
+            throw new AssistantStreamError(
+              parsed.code || "STREAM_ERROR",
+              parsed.message || "The live AI assistant stream is temporarily unavailable.",
+              parsed.request_id
+            );
+          }
           if (parsed.type === "meta") receivedMeta = true;
           if (parsed.type === "token" && parsed.content) onToken(parsed.content);
           if (parsed.type === "done") receivedDone = true;
@@ -433,11 +462,11 @@ export async function streamAssistantChat(
     }
 
     if (!receivedMeta && !signal?.aborted) {
-      throw new Error("Stream closed before receiving meta metadata event.");
+      throw new AssistantStreamError("MISSING_META_EVENT", "Stream closed before receiving meta metadata event.");
     }
 
     if (!receivedDone && !signal?.aborted) {
-      throw new Error("Stream closed unexpectedly before completion done event.");
+      throw new AssistantStreamError("MISSING_DONE_EVENT", "Stream closed unexpectedly before completion done event.");
     }
   } finally {
     try {

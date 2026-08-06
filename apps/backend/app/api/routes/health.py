@@ -62,11 +62,19 @@ def readiness(db: Session = Depends(get_db)):
 
 @router.get("/build-info")
 def build_info(response: Response):
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
+    response.headers["Cache-Control"] = "no-store, max-age=0"
+
+    raw_ts = os.getenv("APP_BUILD_TIMESTAMP")
+    if settings.app_env == "production" and not raw_ts:
+        raise HTTPException(
+            status_code=500,
+            detail="[Configuration Error] APP_BUILD_TIMESTAMP environment variable is required in production.",
+        )
+
     return {
         "version": APP_VERSION,
         "commit": BUILD_COMMIT,
         "branch": BUILD_BRANCH,
         "environment": settings.app_env,
-        "built_at": BUILD_TIMESTAMP,
+        "built_at": raw_ts or BUILD_TIMESTAMP,
     }

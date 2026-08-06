@@ -204,6 +204,7 @@ async def assistant_chat_stream(payload: AssistantChatRequest, request: Request,
             logger.error(f"[Req {req_id}] Generator error: {type(err).__name__}")
             err_data = {
                 "type": "error",
+                "code": "STREAM_ERROR",
                 "message": "The live AI assistant stream is temporarily unavailable.",
                 "request_id": req_id,
             }

@@ -169,8 +169,13 @@ export function FeedCard({
             <div className="card-footer-metrics">
               <div className="metrics-group text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                 <span className="font-medium text-slate-600 dark:text-slate-300">
-                  {item.source_name || "Verified Source"}
+                  {item.source_name || "Source information unavailable"}
                 </span>
+                {item.verification_status === "verified" && (item as any).verified_at && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                    Verified
+                  </span>
+                )}
               </div>
 
               <div className="actions-group flex items-center gap-2">
@@ -213,13 +218,15 @@ export function FeedCard({
             </header>
             <div className="modal-body space-y-2 text-xs text-slate-700 dark:text-slate-300">
               <p><strong>Category:</strong> {item.category}</p>
-              <p><strong>Source:</strong> {item.source_name} ({item.verification_status})</p>
+              <p><strong>Source:</strong> {item.source_name || "Source information unavailable"} ({item.verification_status || "unverified"})</p>
               <p><strong>Location:</strong> {item.location}</p>
               <p><strong>Summary:</strong> {item.summary}</p>
               {item.eligibility && <p><strong>Eligibility:</strong> {item.eligibility}</p>}
               {item.salary_text && <p><strong>Compensation:</strong> {item.salary_text}</p>}
               {item.funding_type && <p><strong>Funding Type:</strong> {item.funding_type}</p>}
-              <p><strong>Source Reliability:</strong> {Math.round(item.source_reliability * 100)}%</p>
+              {item.verification_status !== "demo" && (item as any).data_mode !== "demo" && typeof item.source_reliability === "number" && (
+                <p><strong>Source Reliability:</strong> {Math.round(item.source_reliability * 100)}%</p>
+              )}
             </div>
             <footer className="modal-footer">
               <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="btn-primary">

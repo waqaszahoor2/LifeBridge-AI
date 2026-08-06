@@ -8,11 +8,12 @@ import { useSavedItems } from "@/context/SavedItemsContext";
 export function LeftSidebar() {
   const { savedCount } = useSavedItems();
   const [profile, setProfile] = useState({
-    name: "Guest User",
-    title: "Local Demo Profile — not a secure account",
-    country: "Not set",
-    studyLevel: "Not set",
-    field: "Not set",
+    name: "Guest",
+    title: "Create Local Demo Profile",
+    country: "",
+    studyLevel: "",
+    field: "",
+    hasLocalProfile: false,
   });
   const [completeness, setCompleteness] = useState<number>(0);
   const [buildCommit, setBuildCommit] = useState<string>("");
@@ -30,7 +31,7 @@ export function LeftSidebar() {
 
     // Check stored profile
     const savedProf = getStoredProfile();
-    if (savedProf) {
+    if (savedProf && (savedProf.name || savedProf.country || savedProf.study_level)) {
       const checkedFields = [
         savedProf.name,
         savedProf.country,
@@ -45,15 +46,24 @@ export function LeftSidebar() {
       const calc = Math.min(100, Math.round((filled / 8) * 100));
       setCompleteness(calc);
 
-      setProfile((prev) => ({
-        ...prev,
-        name: savedProf.name || prev.name,
-        country: savedProf.country || prev.country,
-        studyLevel: savedProf.study_level || prev.studyLevel,
-        field: savedProf.field_of_study || prev.field,
-      }));
+      setProfile({
+        name: savedProf.name || "Guest",
+        title: "Local Demo Profile — not a secure account",
+        country: savedProf.country || "",
+        studyLevel: savedProf.study_level || "",
+        field: savedProf.field_of_study || "",
+        hasLocalProfile: true,
+      });
     } else {
       setCompleteness(0);
+      setProfile({
+        name: "Guest",
+        title: "Create Local Demo Profile",
+        country: "",
+        studyLevel: "",
+        field: "",
+        hasLocalProfile: false,
+      });
     }
   }, []);
 
@@ -64,16 +74,20 @@ export function LeftSidebar() {
         <div className="profile-banner-bg" />
         <div className="profile-avatar-wrap">
           <div className="profile-avatar-placeholder" aria-hidden="true">
-            {profile.name && profile.name !== "Guest User" ? profile.name.slice(0, 2).toUpperCase() : "GU"}
+            {profile.hasLocalProfile && profile.name && profile.name !== "Guest"
+              ? profile.name.slice(0, 2).toUpperCase()
+              : "👤"}
           </div>
         </div>
         <div className="profile-info-block">
           <h2 className="profile-name">{profile.name}</h2>
           <p className="profile-headline">{profile.title}</p>
-          <div className="profile-meta-tags">
-            <span className="meta-badge">📍 {profile.country}</span>
-            <span className="meta-badge">🎓 {profile.studyLevel}</span>
-          </div>
+          {(profile.country || profile.studyLevel) && (
+            <div className="profile-meta-tags">
+              {profile.country && <span className="meta-badge">📍 {profile.country}</span>}
+              {profile.studyLevel && <span className="meta-badge">🎓 {profile.studyLevel}</span>}
+            </div>
+          )}
         </div>
 
         <hr className="card-divider" />

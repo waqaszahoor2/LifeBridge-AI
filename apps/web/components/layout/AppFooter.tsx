@@ -15,18 +15,25 @@ interface BuildInfo {
 export function AppFooter() {
   const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null);
 
+  const [failedBuildInfo, setFailedBuildInfo] = useState<boolean>(false);
+
   useEffect(() => {
     fetch("/api/build-info")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) setBuildInfo(data);
+        if (data && data.commit) {
+          setBuildInfo(data);
+          setFailedBuildInfo(false);
+        } else {
+          setFailedBuildInfo(true);
+        }
       })
       .catch(() => {
-        // Fallback silently if offline
+        setFailedBuildInfo(true);
       });
   }, []);
 
-  const commitShort = buildInfo?.commit ? buildInfo.commit.slice(0, 7) : "dev";
+  const commitShort = buildInfo?.commit ? buildInfo.commit.slice(0, 7) : "";
 
   return (
     <footer className="mt-12 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm py-8 px-4 text-xs text-slate-500 dark:text-slate-400">
@@ -65,12 +72,18 @@ export function AppFooter() {
         {/* Right: Environment & Dynamic Build Metadata */}
         <div className="flex items-center gap-2 font-mono text-[11px] bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80">
           <Icon name="shield" size={13} className="text-teal-600 dark:text-teal-400" />
-          <span>v{buildInfo?.version || "1.0.0"}</span>
-          <span className="text-slate-400">({commitShort})</span>
-          {buildInfo?.environment && (
-            <span className="px-1.5 py-0.2 rounded text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              {buildInfo.environment}
-            </span>
+          {failedBuildInfo ? (
+            <span>Build information unavailable</span>
+          ) : (
+            <>
+              <span>v{buildInfo?.version || "1.0.0"}</span>
+              {commitShort && <span className="text-slate-400">({commitShort})</span>}
+              {buildInfo?.environment && (
+                <span className="px-1.5 py-0.2 rounded text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  {buildInfo.environment}
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
