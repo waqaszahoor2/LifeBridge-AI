@@ -1,36 +1,37 @@
 export interface LocalRecommendationProfile {
   name?: string;
-  country: string;
-  city: string;
-  study_level: string;
-  field_of_study: string;
-  skills: string[];
-  interests: string[];
-  preferred_categories: string[];
+  country?: string;
+  city?: string;
+  study_level?: string;
+  field_of_study?: string;
+  skills?: string[];
+  interests?: string[];
+  preferred_categories?: string[];
   target_goal?: string;
   opportunity_type?: string;
   notification_pref?: string;
 }
 
-export const defaultProfile: LocalRecommendationProfile = {
-  country: "Pakistan",
-  city: "Lahore",
-  study_level: "Masters",
-  field_of_study: "Data Science",
-  skills: ["python", "sql", "power bi"],
-  interests: ["fully funded", "remote job", "disaster safety"],
-  preferred_categories: ["job", "scholarship", "disaster", "weather"],
-};
-
 const key = "lifebridge-recommendation-profile";
 
-export function readLocalProfile(): LocalRecommendationProfile {
-  if (typeof window === "undefined") return defaultProfile;
+export function readLocalProfile(): LocalRecommendationProfile | null {
+  if (typeof window === "undefined") return null;
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(key) ?? "null") as LocalRecommendationProfile | null;
-    return parsed ? { ...defaultProfile, ...parsed } : defaultProfile;
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LocalRecommendationProfile;
+    if (
+      parsed &&
+      ((parsed.skills && parsed.skills.length > 0) ||
+        (parsed.interests && parsed.interests.length > 0) ||
+        parsed.country ||
+        parsed.field_of_study)
+    ) {
+      return parsed;
+    }
+    return null;
   } catch {
-    return defaultProfile;
+    return null;
   }
 }
 
@@ -42,3 +43,16 @@ export function saveLocalProfile(profile: LocalRecommendationProfile): void {
 
 export const saveStoredProfile = saveLocalProfile;
 
+export const defaultProfile: LocalRecommendationProfile = {
+  name: "Local Demo Profile",
+  country: "Pakistan",
+  city: "Islamabad",
+  study_level: "Bachelor's Degree",
+  field_of_study: "Computer Science",
+  skills: ["Python", "SQL", "Data Analysis"],
+  interests: ["Data Science", "AI", "Scholarships"],
+  preferred_categories: ["job", "scholarship", "disaster", "weather", "service", "safety", "learning"],
+  target_goal: "Entry-level Data Science & Software Engineering Roles",
+  opportunity_type: "Full-time / Remote / Scholarships",
+  notification_pref: "daily_email",
+};

@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { Icon } from "./ui/Icon";
-import type { ThemeMode } from "@/lib/types";
 
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useNotifications } from "@/context/NotificationContext";
 
 export function Header({
   pageTitle = "For You",
@@ -21,28 +22,19 @@ export function Header({
   isRefreshing?: boolean;
 }) {
   const pathname = usePathname();
-  const { isAuthenticated, user, logout, unreadCount, setUnreadCount } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const { unreadCount, markAllAsRead } = useNotifications();
   
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window !== "undefined") {
-      return (localStorage.getItem("lifebridge-theme") as ThemeMode) || "system";
-    }
-    return "system";
-  });
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (theme === "system") {
-      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.dataset.theme = isDark ? "dark" : "light";
-    } else {
-      document.documentElement.dataset.theme = theme;
-    }
-    localStorage.setItem("lifebridge-theme", theme);
-  }, [theme]);
 
   // Determine current page title if not passed explicitly
   const displayTitle = pageTitle || getTitleFromPath(pathname);
+
+  const notificationLabel =
+    unreadCount > 0
+      ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
+      : "No unread notifications";
 
   return (
     <header className="lb-top-header">
@@ -84,8 +76,8 @@ export function Header({
           <button
             type="button"
             className="header-btn icon-btn notif-btn"
-            aria-label={`${unreadCount} notifications`}
-            onClick={() => setUnreadCount(0)}
+            aria-label={notificationLabel}
+            onClick={() => markAllAsRead()}
             title="Notifications"
           >
             <Icon name="bell" size={18} />
@@ -105,7 +97,7 @@ export function Header({
               aria-label="User Account Options"
             >
               <span className="greeting-text">
-                {isAuthenticated ? `Hello, ${user?.name || "Member"}` : "Hello, Guest"}
+                {isAuthenticated ? `Hello, ${user?.name || "Demo User"}` : "Hello, Guest"}
               </span>
               <div className="avatar-img-placeholder">
                 <Icon name="user" size={18} />
@@ -117,9 +109,9 @@ export function Header({
                 {isAuthenticated ? (
                   <>
                     <div className="dropdown-user-info">
-                      <div className="dropdown-user-name">{user?.name || "Platform Member"}</div>
-                      <div className="dropdown-user-email">{user?.email || "user@lifebridge.ai"}</div>
-                      <div className="dropdown-user-role">{user?.role || "Member"}</div>
+                      <div className="dropdown-user-name">{user?.name || "Demo User"}</div>
+                      <div className="dropdown-user-email">{user?.email || "demo@lifebridge.ai"}</div>
+                      <div className="dropdown-user-role">Local Demo Profile</div>
                     </div>
                     <hr className="dropdown-divider" />
                     <Link href="/profile" className="dropdown-item" role="menuitem" onClick={() => setShowProfileMenu(false)}>
@@ -137,18 +129,18 @@ export function Header({
                         setShowProfileMenu(false);
                       }}
                     >
-                      <Icon name="logout" size={16} /> Log Out
+                      <Icon name="logout" size={16} /> Clear Demo Profile
                     </button>
                   </>
                 ) : (
                   <>
                     <div className="dropdown-user-info">
                       <div className="dropdown-user-name">Guest Explorer</div>
-                      <div className="dropdown-user-email">Sign in to save items & sync preferences</div>
+                      <div className="dropdown-user-email">Set up a local demo profile to personalise</div>
                     </div>
                     <hr className="dropdown-divider" />
                     <Link href="/login" className="dropdown-item font-semibold text-primary-600" role="menuitem" onClick={() => setShowProfileMenu(false)}>
-                      <Icon name="user" size={16} /> Sign In to LifeBridge AI
+                      <Icon name="user" size={16} /> Set Up Local Demo Profile
                     </Link>
                   </>
                 )}

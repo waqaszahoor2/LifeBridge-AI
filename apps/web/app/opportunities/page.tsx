@@ -25,20 +25,20 @@ export default function OpportunitiesPage() {
         setItems(filtered);
       } else {
         if (isDemoModeEnabled()) {
+            const filtered = sampleFeed
+              .filter((i) => ["job", "scholarship", "learning"].includes(i.category))
+              .map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" as const }));
+            setItems(filtered);
+          } else {
+            setItems([]);
+          }
+        }
+      } catch {
+        if (isDemoModeEnabled()) {
           const filtered = sampleFeed
             .filter((i) => ["job", "scholarship", "learning"].includes(i.category))
-            .map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" }));
+            .map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" as const }));
           setItems(filtered);
-        } else {
-          setItems([]);
-        }
-      }
-    } catch {
-      if (isDemoModeEnabled()) {
-        const filtered = sampleFeed
-          .filter((i) => ["job", "scholarship", "learning"].includes(i.category))
-          .map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" }));
-        setItems(filtered);
       } else {
         setErrorMsg("We could not load live opportunities.");
         setItems([]);
@@ -55,7 +55,7 @@ export default function OpportunitiesPage() {
   const displayedItems = items.filter((item) => category === "all" || item.category === category);
 
   return (
-    <AppShell pageTitle="Opportunities Explorer" pageSubtitle="Verified job positions, scholarships, and learning programs with transparent source tracking.">
+    <AppShell pageTitle="Opportunities Explorer" pageSubtitle="Explore sourced jobs, scholarships and learning programs.">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Intro */}
         <div className="mb-6 p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap items-center justify-between gap-4">
@@ -65,7 +65,7 @@ export default function OpportunitiesPage() {
               Opportunities Explorer
             </h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Browse verified positions, grant deadlines, and skill courses with clear audit timestamps.
+              Explore sourced jobs, scholarships and learning programs.
             </p>
           </div>
 

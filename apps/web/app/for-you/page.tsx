@@ -1,66 +1,60 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FeedCard } from "@/components/FeedCard";
-import { FeedFilters, type CategoryKey, type SortMode } from "@/components/FeedFilters";
-import { LeftSidebar } from "@/components/LeftSidebar";
-import { RightSidebar } from "@/components/RightSidebar";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { fetchForYouFeed, fetchRecommendations, isDemoModeEnabled, triggerFeedRefresh } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
-import type { FeedItem } from "@/lib/types";
-import { Icon } from "@/components/ui/Icon";
-import Link from "next/link";
+import { readLocalProfile } from "@/lib/profile";
+import { LeftSidebar } from "@/components/LeftSidebar";
+import type { FeedCategory, FeedItem } from "@/lib/types";
 
-export default function ForYouPage() {
-  return (
-    <Suspense
-      fallback={
-        <AppShell>
-          <div className="max-w-4xl mx-auto p-6 space-y-4">
-            <div className="h-48 rounded-3xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
-            <div className="h-12 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-40 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
-              ))}
-            </div>
-          </div>
-        </AppShell>
-      }
-    >
-      <ForYouFeedContent />
-    </Suspense>
-  );
-}
+type CategoryKey = "all" | "latest" | FeedCategory;
 
-function ForYouFeedContent() {
-  const searchParams = useSearchParams();
+const CATEGORIES: { key: CategoryKey; label: string; icon: IconName }[] = [
+  { key: "all", label: "For You Feed", icon: "sparkles" },
+  { key: "latest", label: "Latest News", icon: "clock" },
+  { key: "disaster", label: "Disasters", icon: "alert" },
+  { key: "scholarship", label: "Scholarships", icon: "academic" },
+  { key: "job", label: "Jobs", icon: "briefcase" },
+  { key: "weather", label: "Weather Alerts", icon: "alert" },
+  { key: "service", label: "Services", icon: "services" },
+  { key: "safety", label: "Scam Alerts", icon: "shield" },
+];
+
+function ForYouContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const urlCategory = (searchParams.get("category") as CategoryKey) || "all";
-  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>(urlCategory);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [sortMode, setSortMode] = useState<SortMode>("urgent");
+  const initialCategory = (searchParams.get("category") as CategoryKey) || "all";
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey>(initialCategory);
 
   const [items, setItems] = useState<FeedItem[]>([]);
-  const [recommendations, setRecommendations] = useState<Record<number, { score: number; reasons: string[] }>>({});
   const [loading, setLoading] = useState<boolean>(true);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [hasMore, setHasMore] = useState<boolean>(true);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
+
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"published" | "score" | "reliability">("published");
+
+  const [recommendations, setRecommendations] = useState<Record<number, { score: number; reasons: string[] }>>({});
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+  const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
+  const [hasProfile, setHasProfile] = useState<boolean>(false);
 
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const isDemo = isDemoModeEnabled();
 
-  // Read saved item IDs from localStorage
+  // Load saved bookmarks from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -103,16 +97,16 @@ function ForYouFeedContent() {
 
       if (data && data.items && data.items.length > 0) {
         setItems(data.items);
-        setSeenIds(new Set(data.items.map((i) => i.id)));
+        setSeenIds(new Set(data.items.map((i: FeedItem) => i.id)));
         setHasMore(data.has_more);
         setNextCursor(data.next_cursor);
       } else {
         if (isDemoModeEnabled()) {
           const filtered = sampleFeed.filter(
-            (i) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
+            (i: FeedItem) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
           );
-          setItems(filtered.map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" })));
-          setSeenIds(new Set(filtered.map((i) => i.id)));
+          setItems(filtered.map((i: FeedItem) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" as const })));
+          setSeenIds(new Set(filtered.map((i: FeedItem) => i.id)));
         } else {
           setItems([]);
         }
@@ -120,23 +114,30 @@ function ForYouFeedContent() {
         setNextCursor(null);
       }
 
-      // Load AI recommendation scores
-      const recs = await fetchRecommendations().catch(() => []);
-      if (recs && recs.length > 0) {
-        const map: Record<number, { score: number; reasons: string[] }> = {};
-        recs.forEach((r) => {
-          map[r.item.id] = { score: r.score, reasons: r.reasons };
-        });
-        setRecommendations(map);
+      // Check profile & load recommendations strictly if profile exists
+      const userProf = readLocalProfile();
+      if (userProf) {
+        setHasProfile(true);
+        const recs = await fetchRecommendations(userProf as unknown as Record<string, unknown>).catch(() => []);
+        if (recs && recs.length > 0) {
+          const map: Record<number, { score: number; reasons: string[] }> = {};
+          recs.forEach((r) => {
+            map[r.item.id] = { score: r.score, reasons: r.reasons };
+          });
+          setRecommendations(map);
+        }
+      } else {
+        setHasProfile(false);
+        setRecommendations({});
       }
     } catch {
       if (isDemoModeEnabled()) {
         setIsOffline(true);
         const filtered = sampleFeed.filter(
-          (i) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
+          (i: FeedItem) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
         );
-        setItems(filtered.map((i) => ({ ...i, verification_status: "demo", data_mode: "demo" })));
-        setSeenIds(new Set(filtered.map((i) => i.id)));
+        setItems(filtered.map((i: FeedItem) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" as const })));
+        setSeenIds(new Set(filtered.map((i: FeedItem) => i.id)));
         setHasMore(false);
         setNextCursor(null);
       } else {
@@ -160,21 +161,19 @@ function ForYouFeedContent() {
     setLoadingMore(true);
 
     try {
-      const excludeStr = Array.from(seenIds).join(",");
       const { data } = await fetchForYouFeed({
         category: selectedCategory === "all" ? undefined : selectedCategory,
-        cursor: nextCursor,
-        limit: 15,
-        exclude_ids: excludeStr,
+        cursor: nextCursor || undefined,
+        limit: 10,
       });
 
       if (data && data.items && data.items.length > 0) {
-        const uniqueNew = data.items.filter((item) => !seenIds.has(item.id));
-        if (uniqueNew.length > 0) {
-          setItems((prev) => [...prev, ...uniqueNew]);
+        const newItems = data.items.filter((item) => !seenIds.has(item.id));
+        if (newItems.length > 0) {
+          setItems((prev) => [...prev, ...newItems]);
           setSeenIds((prev) => {
             const next = new Set(prev);
-            uniqueNew.forEach((i) => next.add(i.id));
+            newItems.forEach((i) => next.add(i.id));
             return next;
           });
           setHasMore(data.has_more);
@@ -214,12 +213,23 @@ function ForYouFeedContent() {
   }, [hasMore, loading, loadingMore, errorMsg, loadNextPage]);
 
   const handleManualRefresh = async () => {
+    setRefreshNotice(null);
+    let refreshSuccess = false;
     try {
-      await triggerFeedRefresh();
+      const res = await triggerFeedRefresh();
+      if (res && res.status === "success") {
+        refreshSuccess = true;
+      }
     } catch {
-      // Ignore background trigger fail
+      refreshSuccess = false;
     }
     await loadInitialFeed();
+    if (refreshSuccess) {
+      setRefreshNotice("Fresh data requested successfully from server.");
+    } else {
+      setRefreshNotice("We reloaded the displayed items, but could not request fresh data from the server.");
+    }
+    setTimeout(() => setRefreshNotice(null), 5000);
   };
 
   const handleHideItem = (item: FeedItem) => {
@@ -258,45 +268,31 @@ function ForYouFeedContent() {
       );
     }
 
-    const copy = [...filtered];
-    if (sortMode === "urgent") {
-      copy.sort((a, b) => {
-        const weight = { critical: 4, high: 3, medium: 2, low: 1 };
-        const aSev = weight[a.severity as keyof typeof weight] || 1;
-        const bSev = weight[b.severity as keyof typeof weight] || 1;
-        if (aSev !== bSev) return bSev - aSev;
-        return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
-      });
-    } else if (sortMode === "match") {
-      copy.sort((a, b) => {
-        const aScore = recommendations[a.id]?.score ?? a.match_score ?? 0.5;
-        const bScore = recommendations[b.id]?.score ?? b.match_score ?? 0.5;
-        return bScore - aScore;
-      });
-    } else if (sortMode === "newest") {
-      copy.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
-    }
-
-    return copy;
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "reliability") {
+        return b.source_reliability - a.source_reliability;
+      }
+      if (sortBy === "score" && hasProfile) {
+        const scoreA = recommendations[a.id]?.score ?? a.match_score ?? 0;
+        const scoreB = recommendations[b.id]?.score ?? b.match_score ?? 0;
+        return scoreB - scoreA;
+      }
+      return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
+    });
   };
 
-  const sortedItems = getFilteredAndSortedItems();
+  const displayedItems = getFilteredAndSortedItems();
 
   return (
-    <AppShell
-      pageTitle="For You"
-      pageSubtitle="Personalized updates and insights that matter to you."
-      onRefresh={handleManualRefresh}
-      isRefreshing={loading}
-    >
-      <div className="lb-for-you-layout">
-        {/* Hero Banner Section */}
-        <div className="mb-6 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-primary-950 to-indigo-950 text-white shadow-xl border border-white/10 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-primary-300 text-xs font-semibold mb-3 border border-white/10 backdrop-blur-md">
+    <AppShell pageTitle="For You Feed" pageSubtitle="Verified updates, AI recommendations, and local safety alerts.">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Banner */}
+        <div className="mb-6 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-primary-950 to-slate-900 border border-slate-800 shadow-xl relative overflow-hidden">
+          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/20 text-primary-300 border border-primary-500/30 text-xs font-semibold mb-3">
               <Icon name="sparkles" size={14} />
-              <span>LifeBridge AI Platform</span>
+              <span>LifeBridge Intelligence Feed</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 text-white">
               Practical AI support for opportunities, skills, safety and everyday decisions.
@@ -330,7 +326,7 @@ function ForYouFeedContent() {
           </div>
         </div>
 
-        {/* Render Top Urgent Emergency Alert Banner ONLY when Global Demo Mode is enabled */}
+        {/* Urgent Emergency Alert Banner ONLY when Global Demo Mode is enabled */}
         {isDemo && (
           <div className="lb-urgent-alert-banner mb-6" role="alert">
             <div className="urgent-banner-left">
@@ -366,112 +362,166 @@ function ForYouFeedContent() {
           </div>
         )}
 
-        {/* Category Filters Chips */}
-        <FeedFilters
-          category={selectedCategory}
-          search={searchTerm}
-          sortMode={sortMode}
-          onCategory={handleCategorySelect}
-          onSearch={setSearchTerm}
-          onSort={setSortMode}
-        />
+        {/* Profile Warning Banner when no profile exists */}
+        {!hasProfile && (
+          <div className="mb-6 p-4 rounded-2xl bg-primary-500/10 border border-primary-500/20 text-slate-800 dark:text-slate-200 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold">
+              <Icon name="user" size={18} className="text-primary-500" />
+              <span>Complete your profile to receive personalized recommendations.</span>
+            </div>
+            <Link href="/profile" className="px-3 py-1.5 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow transition-all shrink-0">
+              Setup Profile
+            </Link>
+          </div>
+        )}
 
-        {/* 3-Column Main Feed Content (Left Sidebar + Central Feed + Right Sidebar) */}
-        <div className="lb-feed-main-grid">
-          <LeftSidebar />
-          {/* Central Feed Column */}
-          <section className="lb-center-feed-column" aria-label="Main Feed">
-            {/* Offline Notification in Demo Mode */}
-            {isDemo && isOffline && (
-              <div className="offline-notice-banner mb-4" role="status">
-                📡 Live feed data is unavailable. Showing demonstration content.
-              </div>
-            )}
+        {refreshNotice && (
+          <div className="mb-4 p-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold flex items-center justify-between">
+            <span>{refreshNotice}</span>
+            <button type="button" onClick={() => setRefreshNotice(null)} className="ml-2 text-xs font-bold opacity-80 hover:opacity-100">✕</button>
+          </div>
+        )}
 
-            {/* Error Banner */}
-            {errorMsg ? (
-              <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center space-y-3 my-4" role="alert">
-                <div className="text-red-600 dark:text-red-400 font-bold text-base">We could not load live updates</div>
-                <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto">{errorMsg}</p>
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm shadow transition-all"
-                  onClick={loadInitialFeed}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : loading ? (
-              <div className="feed-skeletons-list">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="lb-feed-card skeleton-card">
-                    <div className="skeleton-line title-skel" />
-                    <div className="skeleton-line text-skel" />
-                    <div className="skeleton-line short-skel" />
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 no-scrollbar">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.key}
+              type="button"
+              onClick={() => handleCategorySelect(cat.key)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                selectedCategory === cat.key
+                  ? "bg-primary-600 text-white shadow-md shadow-primary-500/20"
+                  : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700/60"
+              }`}
+            >
+              <Icon name={cat.icon} size={15} />
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Controls: Search, Sort, Refresh */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-sm">
+          <div className="relative flex-1 min-w-[240px]">
+            <input
+              type="text"
+              placeholder="Search feed by keyword, tag, or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <div className="absolute left-3 top-2.5 text-slate-400">
+              <Icon name="search" size={14} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <span>Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/60 focus:outline-none"
+              >
+                <option value="published">Latest Published</option>
+                {hasProfile && <option value="score">Highest AI Match</option>}
+                <option value="reliability">Source Reliability</option>
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 transition-all"
+              title="Refresh Feed"
+            >
+              <Icon name="refresh" size={15} />
+            </button>
+          </div>
+        </div>
+
+        {/* Error Banner */}
+        {errorMsg && (
+          <div className="mb-6 p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center space-y-3">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">{errorMsg}</p>
+            <button
+              type="button"
+              onClick={loadInitialFeed}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow transition-all"
+            >
+              Retry Connection
+            </button>
+          </div>
+        )}
+
+        {/* Feed Grid with LeftSidebar Rail */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+          <div className="space-y-4">
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 animate-pulse space-y-3">
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/4" />
+                    <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2" />
                   </div>
                 ))}
               </div>
-            ) : sortedItems.length === 0 ? (
-              <div className="empty-feed-card">
-                <h3>No current updates were found</h3>
-                <p>Try adjusting your category filter or search term.</p>
-                <button
-                  type="button"
-                  className="reset-filter-btn"
-                  onClick={() => {
-                    setSelectedCategory("all");
-                    setSearchTerm("");
-                  }}
-                >
-                  Reset Filters
-                </button>
+            ) : displayedItems.length > 0 ? (
+              <div className="space-y-4">
+                {displayedItems.map((item) => {
+                  const rec = hasProfile ? recommendations[item.id] : undefined;
+                  return (
+                    <FeedCard
+                      key={item.id}
+                      item={item}
+                      matchScore={rec ? rec.score : undefined}
+                      reasons={rec ? rec.reasons : undefined}
+                      isSavedInitial={savedIds.has(item.id)}
+                      onToggleSave={handleToggleSaveItem}
+                      onHide={handleHideItem}
+                    />
+                  );
+                })}
               </div>
             ) : (
-              <div className="feed-cards-list">
-                {sortedItems.map((item) => (
-                  <FeedCard
-                    key={item.id}
-                    item={item}
-                    matchScore={recommendations[item.id]?.score}
-                    reasons={recommendations[item.id]?.reasons}
-                    isSavedInitial={savedIds.has(item.id)}
-                    onToggleSave={handleToggleSaveItem}
-                    onHide={handleHideItem}
-                  />
-                ))}
+              <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60">
+                <Icon name="search" size={32} className="mx-auto text-slate-400 mb-3" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No current updates were found.</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {searchTerm ? `No items matched your search for "${searchTerm}".` : "Check back later for new feed items."}
+                </p>
               </div>
             )}
 
-            {/* Infinite Scroll Sentinel & End of Feed Banner */}
-            <div ref={sentinelRef} className="infinite-scroll-sentinel">
-              {loadingMore && (
-                <div className="loading-more-spinner">
-                  <Icon name="refresh" size={16} className="spin" />
-                  <span>Loading more updates...</span>
-                </div>
-              )}
-              {!hasMore && !loading && !errorMsg && sortedItems.length > 0 && (
-                <div className="end-of-feed-card">
-                  <div className="end-text">
-                    <span className="infinity-symbol">♾</span>
-                    <span>You&apos;ve reached the end of the feed.</span>
+            {/* Infinite Scroll Sentinel */}
+            {hasMore && !loading && (
+              <div ref={sentinelRef} className="py-8 text-center">
+                {loadingMore && (
+                  <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500">
+                    <Icon name="refresh" size={14} className="animate-spin text-primary-500" />
+                    <span>Loading more updates...</span>
                   </div>
-                  <button
-                    type="button"
-                    className="end-refresh-btn"
-                    onClick={handleManualRefresh}
-                  >
-                    <Icon name="refresh" size={14} /> Refresh
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
+                )}
+              </div>
+            )}
+          </div>
 
-          {/* Right Sidebar Widgets */}
-          <RightSidebar />
+          {/* Right Rail: Profile & Quick Links */}
+          <div className="sticky top-20">
+            <LeftSidebar />
+          </div>
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function ForYouPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-xs font-semibold text-slate-500">Loading feed...</div>}>
+      <ForYouContent />
+    </Suspense>
   );
 }

@@ -55,6 +55,11 @@ async def lifespan(app: FastAPI):
         with SessionLocal() as db:
             created = seed_if_empty(db)
             logger.info("Seeded %s synthetic feed items", created)
+    
+    # Initialize application-lifetime Redis client
+    from app.core.rate_limit import init_redis_client, close_redis_client
+    init_redis_client()
+
     stop_event = asyncio.Event()
     scheduler_task = None
     if settings.enable_scheduler:
@@ -63,6 +68,7 @@ async def lifespan(app: FastAPI):
     if scheduler_task:
         stop_event.set()
         await scheduler_task
+    close_redis_client()
 
 
 app = FastAPI(

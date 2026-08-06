@@ -58,9 +58,15 @@ export default function AssistantPage() {
         const isLive = data.status === "ready" && data.configured === true && data.provider_verified === true;
         const modelName = data.model || "llama-3.1-8b-instant";
         if (isLive) {
-          setHealthStatus({ isReady: true, provider: `Groq AI (${modelName})` });
+          setHealthStatus({ isReady: true, provider: `Groq Live (${modelName})` });
+        } else if (data.status === "demo" || data.provider === "local_demo") {
+          setHealthStatus({ isReady: false, provider: "Offline Demo" });
+        } else if (data.status === "configuration_missing" || data.provider === "unavailable") {
+          setHealthStatus({ isReady: false, provider: "Configuration Missing" });
+        } else if (data.status === "verification_failed") {
+          setHealthStatus({ isReady: false, provider: "Verification Failed" });
         } else {
-          setHealthStatus({ isReady: false, provider: "Local Demo Mode" });
+          setHealthStatus({ isReady: false, provider: "Service Unavailable" });
         }
       })
       .catch(() => {
@@ -472,11 +478,13 @@ export default function AssistantPage() {
                     ) : (
                       <>
                         <Icon name="sparkles" size={12} className="text-primary-400" />
-                        {/* Provider Badge Priority: 1. Stopped, 2. Error, 3. Groq, 4. Local Demo, 5. System */}
+                        {/* Provider Badge Priority: 1. Stopped, 2. Error, 3. Pending/Streaming, 4. Groq, 5. Local Demo, 6. System */}
                         {m.status === "stopped" ? (
                           <span className="text-slate-400 font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Stopped</span>
                         ) : m.status === "error" || m.provider === "failed" ? (
                           <span className="text-rose-500 font-semibold px-1.5 py-0.5 rounded bg-rose-500/10">Failed</span>
+                        ) : m.provider === "pending" || m.isStreaming ? (
+                          <span className="text-sky-600 dark:text-sky-400 font-bold px-1.5 py-0.5 rounded bg-sky-500/10 animate-pulse">Thinking...</span>
                         ) : m.provider === "groq" ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-500/10">Groq Live</span>
                         ) : m.provider === "local_demo" ? (

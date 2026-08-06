@@ -67,18 +67,29 @@ def assistant_health():
     )
 
     if not has_key:
-        current_status = "configuration_missing"
+        if settings.assistant_demo_mode:
+            current_status = "demo"
+            provider = "local_demo"
+        else:
+            current_status = "configuration_missing"
+            provider = "unavailable"
         is_ready = False
     else:
         current_status = LAST_VERIFIED_CACHE.get("status", "verification_unknown")
         is_ready = current_status == "ready"
+        if is_ready:
+            provider = "groq"
+        elif current_status in ["verification_failed", "verification_unknown"]:
+            provider = "groq"
+        else:
+            provider = "unavailable"
 
     return {
-        "status": "ready" if is_ready else current_status,
-        "provider": "groq" if is_ready else "local_demo",
+        "status": current_status,
+        "provider": provider,
         "configured": has_key,
         "provider_verified": is_ready,
-        "model": model,
+        "model": model if has_key else ("local_demo_engine" if settings.assistant_demo_mode else "none"),
         "request_id": req_id,
         "verified_at": last_verified,
         "verification_ttl_seconds": 120,

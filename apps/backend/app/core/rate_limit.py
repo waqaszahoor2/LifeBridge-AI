@@ -3,36 +3,60 @@ import time
 import uuid
 import logging
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List, Optional
 from fastapi import HTTPException, Request
 
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Fallback in-memory store for development
+# Application-lifetime singleton Redis client
+_redis_client_instance = None
 _memory_history: Dict[str, List[float]] = defaultdict(list)
 
 
-def get_redis_client():
+def init_redis_client(client=None):
+    global _redis_client_instance
+    if client is not None:
+        _redis_client_instance = client
+        return _redis_client_instance
+
     redis_url = os.getenv("REDIS_URL", "").strip()
     if not redis_url:
+        _redis_client_instance = None
         return None
-    try:
-        import redis
-        client = redis.Redis.from_url(redis_url, decode_responses=True)
-        client.ping()
-        return client
-    except Exception as err:
-        logger.warning(f"[RateLimiter] Redis connection check failed: {type(err).__name__}")
-        return None
+
+    if _redis_client_instance is None:
+        try:
+            import redis
+            _redis_client_instance = redis.Redis.from_url(redis_url, decode_responses=True)
+            _redis_client_instance.ping()
+            logger.info("[RateLimiter] Connected and cached persistent Redis client.")
+        except Exception as err:
+            logger.warning(f"[RateLimiter] Persistent Redis connection failed: {type(err).__name__}")
+            _redis_client_instance = None
+    return _redis_client_instance
+
+
+def close_redis_client():
+    global _redis_client_instance
+    if _redis_client_instance is not None:
+        try:
+            _redis_client_instance.close()
+        except Exception:
+            pass
+        _redis_client_instance = None
 
 
 def extract_client_ip(request: Request) -> str:
     """
     Extract client IP safely according to trusted platform headers.
-    Host platforms: Render (X-Render-Client-IP), Cloudflare (CF-Connecting-IP).
+    In production, trust ONLY explicit platform proxy headers (X-Render-Client-IP, CF-Connecting-IP).
+    Do NOT trust unverified X-Forwarded-For or X-Real-IP headers on direct requests.
     """
+    settings = get_settings()
+    is_prod = settings.app_env.lower() == "production" or os.getenv("REQUIRE_REDIS", "").lower() in ("true", "1")
+
     # 1. Render platform trusted header
     render_ip = request.headers.get("x-render-client-ip")
     if render_ip:
@@ -43,22 +67,23 @@ def extract_client_ip(request: Request) -> str:
     if cf_ip:
         return cf_ip.strip()
 
-    # 3. Standard forwarded header (leftmost IP)
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
-        if ips:
-            return ips[0]
+    # In development mode only, allow X-Forwarded-For / X-Real-IP for local testing
+    if not is_prod:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+            if ips:
+                return ips[0]
 
-    real_ip = request.headers.get("x-real-ip")
-    if real_ip:
-        return real_ip.strip()
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
 
     return request.client.host if request.client else "127.0.0.1"
 
 
 def check_rate_limit(request: Request, limit_type: str = "chat", max_requests: int = 30, window_seconds: int = 60):
-    """Enforce atomic sliding window rate limiting via Redis (mandatory in production) or in-memory fallback."""
+    """Enforce atomic sliding window rate limiting via persistent Redis (mandatory in production) or in-memory fallback."""
     settings = get_settings()
     is_prod = settings.app_env.lower() == "production" or os.getenv("REQUIRE_REDIS", "").lower() in ("true", "1")
 
@@ -67,7 +92,7 @@ def check_rate_limit(request: Request, limit_type: str = "chat", max_requests: i
     now = time.time()
     member = f"{now}:{uuid.uuid4().hex[:8]}"
 
-    redis_client = get_redis_client()
+    redis_client = init_redis_client()
 
     if is_prod and not redis_client:
         raise HTTPException(

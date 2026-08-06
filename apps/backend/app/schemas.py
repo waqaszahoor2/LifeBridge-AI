@@ -41,6 +41,7 @@ class FeedItemOut(BaseModel):
     eligibility: str = ""
     recommendation_reason: str | None = None
     match_score: float | None = None
+    data_mode: str = "live"
 
 
 
@@ -350,7 +351,7 @@ class RoadmapResponse(BaseModel):
     estimated_hours: int
     completion_percentage: float = 0.0
     current_phase_number: int = 1
-    mode_used: Literal["ai_generated", "structured_template"]
+    mode_used: Literal["ai_generated", "structured_template", "local_demo"]
     personalization_reason: str
     phases: list[RoadmapPhaseOut]
     tools: list[ToolRecommendationOut]
@@ -411,8 +412,13 @@ class AssistantChatResponse(BaseModel):
 class AssistantHealthResponse(BaseModel):
     status: str = "ready"
     provider: str = "groq"
-    model_configured: bool = True
-    api_key_configured: bool = True
+    configured: bool = True
+    provider_verified: bool = True
+    model: str = "llama-3.1-8b-instant"
+    request_id: str | None = None
+    verified_at: str | None = None
+    verification_ttl_seconds: int = 120
+    last_verified_at: str | None = None
 
 
 

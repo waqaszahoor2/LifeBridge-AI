@@ -109,7 +109,7 @@ def call_groq_chat(
         if not settings.assistant_demo_mode:
             raise HTTPException(
                 status_code=502,
-                detail=f"Groq provider request failed: {type(err).__name__}",
+                detail="The AI assistant service encountered a provider error. Please try again.",
             )
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
         fallback_reply = generate_generic_demo_response(last_user_msg)
@@ -189,7 +189,7 @@ async def stream_groq_chat_async(
         if not settings.assistant_demo_mode:
             yield {
                 "type": "error",
-                "message": f"The live Groq AI assistant stream encountered an error: {type(err).__name__}",
+                "message": "The live AI assistant stream is temporarily unavailable.",
                 "request_id": req_id,
             }
             return

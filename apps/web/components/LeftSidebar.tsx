@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getStoredProfile } from "@/lib/profile";
+import { useSavedItems } from "@/context/SavedItemsContext";
 
 export function LeftSidebar() {
+  const { savedCount } = useSavedItems();
   const [profile, setProfile] = useState({
     name: "Guest User",
     title: "Local Demo Profile — not a secure account",
@@ -12,7 +14,6 @@ export function LeftSidebar() {
     studyLevel: "Not set",
     field: "Not set",
   });
-  const [savedCount, setSavedCount] = useState<number>(0);
   const [completeness, setCompleteness] = useState<number>(0);
   const [buildCommit, setBuildCommit] = useState<string>("");
 
@@ -53,18 +54,6 @@ export function LeftSidebar() {
       }));
     } else {
       setCompleteness(0);
-    }
-
-    const storedSaved = localStorage.getItem("lifebridge_saved_items");
-    if (storedSaved) {
-      try {
-        const parsed = JSON.parse(storedSaved);
-        if (Array.isArray(parsed)) setSavedCount(parsed.length);
-      } catch {
-        setSavedCount(0);
-      }
-    } else {
-      setSavedCount(0);
     }
   }, []);
 

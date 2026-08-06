@@ -20,7 +20,9 @@ const navItems: NavGroupItem[] = [
   { href: "/scholarships", label: "Scholarships", icon: "academic" },
   { href: "/disasters", label: "Safety Alerts", icon: "alert" },
   { href: "/services", label: "Services", icon: "services" },
+  { href: "/decision-graph", label: "Decision Graph", icon: "sparkles" },
   { href: "/trust-scanner", label: "Trust Scanner", icon: "shield" },
+  { href: "/accessibility", label: "AccessLink", icon: "user" },
   { href: "/skills", label: "CV SkillBridge", icon: "book" },
   { href: "/saved", label: "Saved Items", icon: "bookmark" },
 ];

@@ -149,25 +149,19 @@ export async function reportFeedItem(itemId: number): Promise<{ status: string; 
   }
 }
 
-export async function fetchRecommendations(payload?: Record<string, unknown>): Promise<Recommendation[]> {
+export async function fetchRecommendations(payload?: Record<string, unknown> | null): Promise<Recommendation[]> {
+  if (!payload) return [];
   try {
     return await request<Recommendation[]>("/api/v1/recommendations", {
       method: "POST",
-      body: JSON.stringify(
-        payload ?? {
-          skills: ["python", "data science"],
-          preferred_categories: ["job", "scholarship"],
-          country: "Pakistan",
-          limit: 10,
-        }
-      ),
+      body: JSON.stringify(payload),
     });
   } catch (err) {
     if (!isDemoModeEnabled()) {
       throw err instanceof Error ? err : new Error("We could not complete this action. Nothing was sent.");
     }
     return sampleFeed.map((item) => ({
-      item: { ...item, verification_status: "demo", data_mode: "demo" },
+      item: { ...item, verification_status: "demo" as const, data_mode: "demo" },
       score: 0.5,
       reasons: ["Sample score for interface testing."],
     }));

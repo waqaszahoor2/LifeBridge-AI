@@ -5,6 +5,7 @@ import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
 
+import { AppFooter } from "./layout/AppFooter";
 import { FloatingAssistantButton } from "./ui/FloatingAssistantButton";
 
 export function AppShell({
@@ -30,7 +31,8 @@ export function AppShell({
           onRefresh={onRefresh}
           isRefreshing={isRefreshing}
         />
-        <main className="lb-app-content-body">{children}</main>
+        <main id="main-content" className="lb-app-content-body flex-1">{children}</main>
+        <AppFooter />
       </div>
       <FloatingAssistantButton />
       <MobileNav />

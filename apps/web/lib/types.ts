@@ -33,6 +33,7 @@ export interface FeedItem {
   eligibility?: string;
   recommendation_reason?: string | null;
   match_score?: number | null;
+  data_mode?: "live" | "demo";
 }
 
 export interface CursorPaginatedResponse {
@@ -67,7 +68,8 @@ export interface NearbyService {
   distance_km?: number | null;
   accessibility: string;
   address: string;
-  source_url: string;
+  source_url: string | null;
+  data_mode?: "demo" | "live";
 }
 
 export interface CvAnalysis {

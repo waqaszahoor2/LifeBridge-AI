@@ -47,9 +47,13 @@ def readiness(db: Session = Depends(get_db)):
         if not redis_url:
             raise HTTPException(status_code=503, detail="REDIS_URL is required in production but missing")
         try:
-            import redis
-            r = redis.Redis.from_url(redis_url)
+            from app.core.rate_limit import init_redis_client
+            r = init_redis_client()
+            if r is None:
+                raise HTTPException(status_code=503, detail="Redis rate limiter is not ready")
             r.ping()
+        except HTTPException:
+            raise
         except Exception as exc:
             raise HTTPException(status_code=503, detail="Redis rate limiter is not ready") from exc
 

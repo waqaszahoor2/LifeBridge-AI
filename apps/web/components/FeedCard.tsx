@@ -16,11 +16,13 @@ const defaultCategoryImages: Record<string, string> = {
   learning: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop",
 };
 
+import { useSavedItems } from "@/context/SavedItemsContext";
+
 export function FeedCard({
   item,
   matchScore,
   reasons,
-  isSavedInitial = false,
+  isSavedInitial,
   onToggleSave,
   onHide,
 }: {
@@ -31,7 +33,8 @@ export function FeedCard({
   onToggleSave?: (item: FeedItem, saved: boolean) => void;
   onHide?: (item: FeedItem) => void;
 }) {
-  const [isSaved, setIsSaved] = useState<boolean>(isSavedInitial);
+  const { isSaved: checkIsSaved, toggleSave } = useSavedItems();
+  const isSaved = isSavedInitial !== undefined ? isSavedInitial : checkIsSaved(item.id);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isReporting, setIsReporting] = useState<boolean>(false);
@@ -46,8 +49,8 @@ export function FeedCard({
   }
 
   function handleSaveToggle() {
+    toggleSave(item.id);
     const nextSaved = !isSaved;
-    setIsSaved(nextSaved);
     if (onToggleSave) {
       onToggleSave(item, nextSaved);
     }
@@ -71,7 +74,7 @@ export function FeedCard({
       await navigator.clipboard.writeText(item.source_url);
       triggerToast("Link copied to clipboard!");
     } catch {
-      triggerToast("Shared item link");
+      triggerToast("We could not share or copy this link.");
     }
   }
 

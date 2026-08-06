@@ -24,7 +24,6 @@ export default function ServicesPage() {
   const [items, setItems] = useState<NearbyService[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const isDemo = isDemoModeEnabled();
 
   function handleCityChange(newCity: string) {
@@ -61,7 +60,8 @@ export default function ServicesPage() {
     setLoading(true);
     setError("");
     try {
-      setItems(await getNearbyServices(latitude, longitude, serviceType));
+      const res = await getNearbyServices(latitude, longitude, serviceType);
+      setItems(res.map((item) => ({ ...item, data_mode: "live" as const })));
     } catch {
       if (isDemoModeEnabled()) {
         setItems([
@@ -74,7 +74,8 @@ export default function ServicesPage() {
             distance_km: 1.1,
             accessibility: "yes",
             address: "Demo Location Ward, Block A",
-            source_url: "#",
+            source_url: null,
+            data_mode: "demo",
           },
           {
             external_id: "srv_demo_2",
@@ -85,7 +86,8 @@ export default function ServicesPage() {
             distance_km: 2.3,
             accessibility: "yes",
             address: "Demo Community Complex",
-            source_url: "#",
+            source_url: null,
+            data_mode: "demo",
           },
         ]);
       } else {
@@ -103,7 +105,7 @@ export default function ServicesPage() {
   }
 
   return (
-    <AppShell pageTitle="Essential Services" pageSubtitle="Find verified emergency wards, community health clinics, and essential care facilities.">
+    <AppShell pageTitle="Essential Services" pageSubtitle="Find nearby essential and community services.">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Intro */}
         <div className="mb-6 p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -112,7 +114,7 @@ export default function ServicesPage() {
             Essential Service Finder
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Search nearby hospitals, emergency clinics, and community support centers with clear location data.
+            Find nearby essential and community services.
           </p>
         </div>
 
@@ -190,12 +192,30 @@ export default function ServicesPage() {
                 <div key={item.external_id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">{item.name}</h3>
-                    <span className="px-2 py-0.5 text-[10px] uppercase font-bold rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                      {item.service_type}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {item.data_mode === "demo" ? (
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                          Demo
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-[10px] uppercase font-bold rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          {item.service_type}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="text-xs text-slate-500">Distance: {item.distance_km ?? "?"} km</p>
                   <p className="text-xs text-slate-600 dark:text-slate-300">{item.address || "Address details unavailable"}</p>
+                  {item.source_url && (
+                    <a
+                      href={item.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline pt-2"
+                    >
+                      <Icon name="external" size={14} /> View Source
+                    </a>
+                  )}
                 </div>
               ))}
             </div>

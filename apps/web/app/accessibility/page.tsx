@@ -62,7 +62,8 @@ export default function AccessibilityPage() {
     setLoading(true);
     setError("");
     try {
-      setItems(await getNearbyServices(lat, lng, "all"));
+      const res = await getNearbyServices(lat, lng, "all");
+      setItems(res.map((item) => ({ ...item, data_mode: "live" as const })));
     } catch {
       if (isDemoModeEnabled()) {
         setItems([
@@ -75,7 +76,8 @@ export default function AccessibilityPage() {
             distance_km: 0.8,
             accessibility: "yes",
             address: "Demo Main Medical Blvd",
-            source_url: "#",
+            source_url: null,
+            data_mode: "demo",
           },
           {
             external_id: "osm_demo_2",
@@ -86,7 +88,8 @@ export default function AccessibilityPage() {
             distance_km: 1.2,
             accessibility: "yes",
             address: "Demo Station Road Gate 2",
-            source_url: "#",
+            source_url: null,
+            data_mode: "demo",
           },
         ]);
       } else {
@@ -104,7 +107,7 @@ export default function AccessibilityPage() {
   }
 
   return (
-    <AppShell pageTitle="AccessLink Mobility" pageSubtitle="Search nearby accessible places and inspect wheelchair metadata.">
+    <AppShell pageTitle="AccessLink Mobility" pageSubtitle="Inspect available accessibility information for nearby places.">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Intro */}
         <div className="mb-6 p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -113,7 +116,7 @@ export default function AccessibilityPage() {
             AccessLink Mobility Search
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Find nearby services with verified wheelchair accessibility metadata.
+            Inspect available accessibility information for nearby places.
           </p>
         </div>
 
@@ -235,6 +238,16 @@ export default function AccessibilityPage() {
                     Wheelchair: {item.accessibility}
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">{item.address || "Address details in OpenStreetMap"}</p>
+                  {item.source_url && (
+                    <a
+                      href={item.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline pt-2"
+                    >
+                      <Icon name="external" size={14} /> View Source
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
