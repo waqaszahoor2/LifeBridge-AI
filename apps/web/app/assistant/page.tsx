@@ -532,7 +532,7 @@ export default function AssistantPage() {
             <div className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit shadow-sm">
               <Icon name="refresh" size={16} className="animate-spin text-primary-500" />
               <span className="text-xs text-slate-600 dark:text-slate-300">
-                Streaming response tokens from {healthStatus.isReady ? "Groq Live" : "Local Demo Mode"}…
+                Streaming response from {healthStatus.provider || "assistant"}…
               </span>
               <button
                 type="button"

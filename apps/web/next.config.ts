@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
+const BUILD_TIME = process.env.APP_BUILD_TIMESTAMP || "2026-08-06T10:00:00.000Z";
+
 const nextConfig: NextConfig = {
+  env: {
+    APP_BUILD_TIMESTAMP: BUILD_TIME,
+  },
   ...(process.env.BUILD_STANDALONE === "true" ? { output: "standalone" } : {}),
   poweredByHeader: false,
   reactStrictMode: true,

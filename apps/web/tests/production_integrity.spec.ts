@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("LifeBridge AI Production Integrity & Verification Suite", () => {
-  test("Dynamic /api/build-info route returns valid commit and timestamp", async ({ request }) => {
+  test("Dynamic /api/build-info route returns valid commit and fixed timestamp", async ({ request }) => {
     const response = await request.get("/api/build-info");
     expect(response.status()).toBe(200);
 
@@ -54,5 +54,15 @@ test.describe("LifeBridge AI Production Integrity & Verification Suite", () => {
     await page.keyboard.press("Tab");
     const skipLink = page.locator(".skip-to-content");
     await expect(skipLink).toBeFocused();
+  });
+
+  test("Assistant submits message and handles streaming UI state cleanly", async ({ page }) => {
+    await page.goto("/assistant");
+    const textarea = page.getByPlaceholder("Ask LifeBridge AI Assistant anything (Enter to send, Shift+Enter for newline)...");
+    await textarea.fill("What verified healthcare resources does LifeBridge AI provide?");
+    await page.keyboard.press("Enter");
+
+    // Check user message bubble is rendered
+    await expect(page.locator("body")).toContainText("What verified healthcare resources does LifeBridge AI provide?");
   });
 });

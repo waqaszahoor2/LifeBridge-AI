@@ -64,8 +64,11 @@ def call_groq_chat(
     if not is_groq_configured:
         if not settings.assistant_demo_mode:
             raise HTTPException(
-                status_code=530 if False else 503,
-                detail="Groq API key is not configured and ASSISTANT_DEMO_MODE is false.",
+                status_code=503,
+                detail={
+                    "error_code": "CONFIGURATION_MISSING",
+                    "message": "The live AI assistant is temporarily unavailable.",
+                },
             )
         # Local Demo Mode fallback (only when ASSISTANT_DEMO_MODE is True)
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
@@ -78,7 +81,7 @@ def call_groq_chat(
             "conversation_id": conversation_id,
             "provider": "local_demo",
             "citations": [],
-            "disclaimer": "Local Demo Mode: GROQ_API_KEY is not configured on the backend server.",
+            "disclaimer": "Local Demo Mode.",
             "status": "fallback",
         }
 
@@ -109,7 +112,10 @@ def call_groq_chat(
         if not settings.assistant_demo_mode:
             raise HTTPException(
                 status_code=502,
-                detail="The AI assistant service encountered a provider error. Please try again.",
+                detail={
+                    "error_code": "PROVIDER_ERROR",
+                    "message": "The live AI assistant service encountered a provider error. Please try again.",
+                },
             )
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
         fallback_reply = generate_generic_demo_response(last_user_msg)
@@ -121,7 +127,7 @@ def call_groq_chat(
             "conversation_id": conversation_id,
             "provider": "local_demo",
             "citations": [],
-            "disclaimer": "Local Demo Mode: Groq provider failed.",
+            "disclaimer": "Local Demo Mode.",
             "status": "fallback",
         }
 
@@ -147,15 +153,16 @@ async def stream_groq_chat_async(
         if not settings.assistant_demo_mode:
             yield {
                 "type": "error",
-                "message": "Groq API key is not configured and ASSISTANT_DEMO_MODE is false.",
+                "code": "CONFIGURATION_MISSING",
+                "message": "The live AI assistant is temporarily unavailable.",
                 "request_id": req_id,
             }
             return
-        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine"}
+        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine", "request_id": req_id}
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
         demo_reply = generate_generic_demo_response(last_user_msg)
-        yield {"type": "token", "content": demo_reply}
-        yield {"type": "done"}
+        yield {"type": "token", "content": demo_reply, "request_id": req_id}
+        yield {"type": "done", "request_id": req_id}
         return
 
     try:
@@ -170,7 +177,7 @@ async def stream_groq_chat_async(
             stream=True,
         )
 
-        yield {"type": "meta", "provider": "groq", "status": "success", "model": model}
+        yield {"type": "meta", "provider": "groq", "status": "success", "model": model, "request_id": req_id}
 
         try:
             async for chunk in completion:
@@ -178,8 +185,8 @@ async def stream_groq_chat_async(
                     delta = chunk.choices[0].delta
                     token = delta.content if delta and hasattr(delta, "content") else None
                     if token:
-                        yield {"type": "token", "content": token}
-            yield {"type": "done"}
+                        yield {"type": "token", "content": token, "request_id": req_id}
+            yield {"type": "done", "request_id": req_id}
         finally:
             if hasattr(completion, "close"):
                 await completion.close()
@@ -189,15 +196,16 @@ async def stream_groq_chat_async(
         if not settings.assistant_demo_mode:
             yield {
                 "type": "error",
+                "code": "PROVIDER_ERROR",
                 "message": "The live AI assistant stream is temporarily unavailable.",
                 "request_id": req_id,
             }
             return
-        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine"}
+        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine", "request_id": req_id}
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
         demo_reply = generate_generic_demo_response(last_user_msg)
-        yield {"type": "token", "content": demo_reply}
-        yield {"type": "done"}
+        yield {"type": "token", "content": demo_reply, "request_id": req_id}
+        yield {"type": "done", "request_id": req_id}
 
 
 def generate_generic_demo_response(user_query: str) -> str:
