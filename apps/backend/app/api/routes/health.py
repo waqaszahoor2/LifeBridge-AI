@@ -11,7 +11,7 @@ from app.core.database import get_db
 router = APIRouter(tags=["health"])
 settings = get_settings()
 
-BUILD_TIMESTAMP = os.getenv("APP_BUILD_TIMESTAMP") or "NOT_CONFIGURED_BUILD_TIMESTAMP"
+BUILD_TIMESTAMP = os.getenv("APP_BUILD_TIMESTAMP") or datetime.now(UTC).isoformat()
 BUILD_COMMIT = (
     os.getenv("GIT_COMMIT_SHA")
     or os.getenv("RENDER_GIT_COMMIT")

@@ -13,7 +13,7 @@ export async function GET() {
     "main";
 
   const version = process.env.APP_VERSION || "1.0.0";
-  const builtAt = process.env.APP_BUILD_TIMESTAMP || "NOT_CONFIGURED_BUILD_TIMESTAMP";
+  const builtAt = process.env.APP_BUILD_TIMESTAMP || new Date().toISOString();
 
   return NextResponse.json(
     {
