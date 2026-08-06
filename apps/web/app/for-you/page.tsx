@@ -5,29 +5,33 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FeedCard } from "@/components/FeedCard";
+import { LeftSidebar } from "@/components/LeftSidebar";
+import { RightSidebar } from "@/components/RightSidebar";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { fetchForYouFeed, fetchRecommendations, isDemoModeEnabled, triggerFeedRefresh } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
 import { readLocalProfile } from "@/lib/profile";
-import { LeftSidebar } from "@/components/LeftSidebar";
+import { useSavedItems } from "@/context/SavedItemsContext";
+import { useAuth } from "@/context/AuthContext";
 import type { FeedCategory, FeedItem } from "@/lib/types";
 
 type CategoryKey = "all" | "latest" | FeedCategory;
 
 const CATEGORIES: { key: CategoryKey; label: string; icon: IconName }[] = [
-  { key: "all", label: "For You Feed", icon: "sparkles" },
-  { key: "latest", label: "Latest News", icon: "clock" },
-  { key: "disaster", label: "Disasters", icon: "alert" },
-  { key: "scholarship", label: "Scholarships", icon: "academic" },
+  { key: "all", label: "For You", icon: "sparkles" },
   { key: "job", label: "Jobs", icon: "briefcase" },
-  { key: "weather", label: "Weather Alerts", icon: "alert" },
+  { key: "scholarship", label: "Scholarships", icon: "academic" },
+  { key: "skills" as any, label: "Skills", icon: "academic" },
+  { key: "safety", label: "Safety", icon: "shield" },
+  { key: "disaster", label: "Disasters", icon: "alert" },
   { key: "service", label: "Services", icon: "services" },
-  { key: "safety", label: "Scam Alerts", icon: "shield" },
 ];
 
 function ForYouContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, isAuthenticated } = useAuth();
+  const { isSaved, toggleSave } = useSavedItems();
 
   const initialCategory = (searchParams.get("category") as CategoryKey) || "all";
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>(initialCategory);
@@ -46,28 +50,11 @@ function ForYouContent() {
 
   const [recommendations, setRecommendations] = useState<Record<number, { score: number; reasons: string[] }>>({});
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
-  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
-  const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
   const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean>(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isDemo = isDemoModeEnabled();
-
-  // Load saved bookmarks from localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("lifebridge_saved_items");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) setSavedIds(new Set(parsed));
-        }
-      } catch {
-        // Fallback
-      }
-    }
-  }, []);
 
   // Sync category with URL search param
   const handleCategorySelect = (category: CategoryKey) => {
@@ -97,7 +84,6 @@ function ForYouContent() {
 
       if (data && data.items && data.items.length > 0) {
         setItems(data.items);
-        setSeenIds(new Set(data.items.map((i: FeedItem) => i.id)));
         setHasMore(data.has_more);
         setNextCursor(data.next_cursor);
       } else {
@@ -106,7 +92,6 @@ function ForYouContent() {
             (i: FeedItem) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
           );
           setItems(filtered.map((i: FeedItem) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" as const })));
-          setSeenIds(new Set(filtered.map((i: FeedItem) => i.id)));
         } else {
           setItems([]);
         }
@@ -114,7 +99,7 @@ function ForYouContent() {
         setNextCursor(null);
       }
 
-      // Check profile & load recommendations strictly if profile exists
+      // Check local profile & load recommendations strictly if profile exists
       const userProf = readLocalProfile();
       if (userProf) {
         setHasProfile(true);
@@ -137,11 +122,11 @@ function ForYouContent() {
           (i: FeedItem) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
         );
         setItems(filtered.map((i: FeedItem) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" as const })));
-        setSeenIds(new Set(filtered.map((i: FeedItem) => i.id)));
         setHasMore(false);
         setNextCursor(null);
       } else {
-        setErrorMsg("We could not load live feed updates. Please check backend API connectivity.");
+        // User-friendly error message — no technical infra jargon exposed
+        setErrorMsg("Live updates are temporarily unavailable. Please try again in a moment.");
         setItems([]);
         setHasMore(false);
         setNextCursor(null);
@@ -168,14 +153,10 @@ function ForYouContent() {
       });
 
       if (data && data.items && data.items.length > 0) {
-        const newItems = data.items.filter((item) => !seenIds.has(item.id));
+        const existingIds = new Set(items.map((i) => i.id));
+        const newItems = data.items.filter((item) => !existingIds.has(item.id));
         if (newItems.length > 0) {
           setItems((prev) => [...prev, ...newItems]);
-          setSeenIds((prev) => {
-            const next = new Set(prev);
-            newItems.forEach((i) => next.add(i.id));
-            return next;
-          });
           setHasMore(data.has_more);
           setNextCursor(data.next_cursor);
         } else {
@@ -189,7 +170,7 @@ function ForYouContent() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, errorMsg, seenIds, selectedCategory, nextCursor]);
+  }, [loadingMore, hasMore, errorMsg, items, selectedCategory, nextCursor]);
 
   // IntersectionObserver for continuous infinite scroll
   useEffect(() => {
@@ -225,29 +206,17 @@ function ForYouContent() {
     }
     await loadInitialFeed();
     if (refreshSuccess) {
-      setRefreshNotice("Fresh data requested successfully from server.");
+      setRefreshNotice("Fresh data requested successfully.");
     } else {
-      setRefreshNotice("We reloaded the displayed items, but could not request fresh data from the server.");
+      setRefreshNotice("Feed reloaded.");
     }
-    setTimeout(() => setRefreshNotice(null), 5000);
+    setTimeout(() => setRefreshNotice(null), 4000);
   };
 
   const handleHideItem = (item: FeedItem) => {
     setHiddenIds((prev) => {
       const next = new Set(prev);
       next.add(item.id);
-      return next;
-    });
-  };
-
-  const handleToggleSaveItem = (item: FeedItem, saved: boolean) => {
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      if (saved) next.add(item.id);
-      else next.delete(item.id);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("lifebridge_saved_items", JSON.stringify(Array.from(next)));
-      }
       return next;
     });
   };
@@ -262,14 +231,14 @@ function ForYouContent() {
         (i) =>
           i.title.toLowerCase().includes(term) ||
           i.summary.toLowerCase().includes(term) ||
-          i.source_name.toLowerCase().includes(term) ||
-          i.tags.toLowerCase().includes(term) ||
-          i.location.toLowerCase().includes(term)
+          (i.source_name && i.source_name.toLowerCase().includes(term)) ||
+          (i.tags && i.tags.toLowerCase().includes(term)) ||
+          (i.location && i.location.toLowerCase().includes(term))
       );
     }
 
     return [...filtered].sort((a, b) => {
-      if (sortBy === "reliability") {
+      if (sortBy === "reliability" && typeof a.source_reliability === "number" && typeof b.source_reliability === "number") {
         return b.source_reliability - a.source_reliability;
       }
       if (sortBy === "score" && hasProfile) {
@@ -284,187 +253,161 @@ function ForYouContent() {
   const displayedItems = getFilteredAndSortedItems();
 
   return (
-    <AppShell pageTitle="For You Feed" pageSubtitle="Verified updates, AI recommendations, and local safety alerts.">
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Banner */}
-        <div className="mb-6 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-primary-950 to-slate-900 border border-slate-800 shadow-xl relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-500/20 text-primary-300 border border-primary-500/30 text-xs font-semibold mb-3">
-              <Icon name="sparkles" size={14} />
-              <span>LifeBridge Intelligence Feed</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 text-white">
-              Practical AI support for opportunities, skills, safety and everyday decisions.
-            </h2>
-            <p className="text-sm sm:text-base text-slate-300 mb-6 leading-relaxed">
-              Discover trusted opportunities, develop useful skills, verify suspicious content and find essential services from one accessible platform.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
+    <AppShell onRefresh={handleManualRefresh} isRefreshing={loading}>
+      {/* 3-Column LinkedIn-Style Desktop Layout Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_300px] gap-5 items-start">
+        {/* LEFT COLUMN: Profile Card & Shortcuts */}
+        <div className="hidden lg:block sticky top-20">
+          <LeftSidebar />
+        </div>
+
+        {/* CENTER COLUMN: Feed Composer, Categories, Toolbar, & Feed Cards */}
+        <div className="space-y-4 min-w-0">
+          {/* Feed Composer Card */}
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs p-4 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-teal-400 text-white font-extrabold text-sm flex items-center justify-center shrink-0">
+                {isAuthenticated && user?.name ? user.name.slice(0, 1).toUpperCase() : "G"}
+              </div>
               <Link
                 href="/assistant"
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-teal-400 hover:from-primary-600 hover:to-teal-500 text-slate-950 font-bold text-sm shadow-lg transition-all flex items-center gap-2"
+                className="flex-1 py-2.5 px-4 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-500 dark:text-slate-400 text-xs font-semibold border border-slate-200/80 dark:border-slate-700/80 transition-colors flex items-center justify-between"
               >
-                <Icon name="sparkles" size={16} />
-                <span>Ask LifeBridge AI</span>
+                <span>Ask or share something with LifeBridge AI...</span>
+                <Icon name="sparkles" size={16} className="text-primary-500" />
               </Link>
-              <Link
-                href="/opportunities"
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/15 backdrop-blur-md transition-all flex items-center gap-2"
-              >
-                <Icon name="clock" size={16} />
-                <span>Explore Opportunities</span>
+            </div>
+
+            <hr className="border-slate-100 dark:border-slate-800" />
+
+            {/* Action Buttons Row */}
+            <div className="flex items-center justify-between gap-1 text-xs font-semibold overflow-x-auto no-scrollbar">
+              <Link href="/assistant" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
+                <Icon name="sparkles" size={16} className="text-primary-600" />
+                <span>Ask AI</span>
               </Link>
-              <Link
-                href="/profile"
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/15 backdrop-blur-md transition-all flex items-center gap-2"
-              >
-                <Icon name="user" size={16} />
-                <span>Build My Profile</span>
+              <Link href="/trust-scanner" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
+                <Icon name="shield" size={16} className="text-teal-600" />
+                <span>Scan Content</span>
+              </Link>
+              <Link href="/opportunities" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
+                <Icon name="briefcase" size={16} className="text-amber-600" />
+                <span>Find Opportunity</span>
+              </Link>
+              <Link href="/skills" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
+                <Icon name="academic" size={16} className="text-indigo-600" />
+                <span>Build Roadmap</span>
               </Link>
             </div>
           </div>
-        </div>
 
-        {/* Urgent Emergency Alert Banner ONLY when Global Demo Mode is enabled */}
-        {isDemo && (
-          <div className="lb-urgent-alert-banner mb-6" role="alert">
-            <div className="urgent-banner-left">
-              <div className="urgent-icon-circle">
-                <Icon name="alert" size={20} className="text-red" />
-              </div>
-              <div className="urgent-text-content">
-                <div className="urgent-header-row">
-                  <span className="urgent-label-red">DEMONSTRATION ALERT — NOT A LIVE WARNING</span>
-                  <span className="urgent-badge-high">UI Demo Notice</span>
-                </div>
-                <p className="urgent-message-body">
-                  This is a platform demonstration alert layout. Live emergency bulletins are sourced directly from verified regional disaster APIs when configured.
+          {/* Urgent Emergency Alert Banner ONLY when Global Demo Mode is enabled */}
+          {isDemo && (
+            <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 flex items-start gap-3 text-xs" role="alert">
+              <Icon name="alert" size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <div className="font-extrabold tracking-wide uppercase text-[11px] text-amber-700 dark:text-amber-400">DEMONSTRATION ALERT</div>
+                <p className="leading-snug text-slate-700 dark:text-slate-300">
+                  This is a platform demonstration feed. Emergency bulletins are sourced from verified regional APIs when live connectors are configured.
                 </p>
-                <div className="urgent-footer-row">
-                  <a href="/disasters" className="urgent-action-link">
-                    View Disaster Bulletin Directory &gt;
-                  </a>
-                  <span className="urgent-source-meta">Source: LifeBridge AI Demo Layout • UI Demonstration Only</span>
-                </div>
               </div>
             </div>
-            <button
-              type="button"
-              className="urgent-close-btn"
-              onClick={(e) => {
-                (e.currentTarget.parentElement as HTMLElement).style.display = "none";
-              }}
-              aria-label="Dismiss Alert"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Profile Warning Banner when no profile exists */}
-        {!hasProfile && (
-          <div className="mb-6 p-4 rounded-2xl bg-primary-500/10 border border-primary-500/20 text-slate-800 dark:text-slate-200 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-xs sm:text-sm font-semibold">
-              <Icon name="user" size={18} className="text-primary-500" />
-              <span>Complete your profile to receive personalized recommendations.</span>
+          {refreshNotice && (
+            <div className="p-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold flex items-center justify-between shadow-xs">
+              <span>{refreshNotice}</span>
+              <button type="button" onClick={() => setRefreshNotice(null)} className="ml-2 font-bold opacity-80 hover:opacity-100">✕</button>
             </div>
-            <Link href="/profile" className="px-3 py-1.5 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow transition-all shrink-0">
-              Setup Profile
-            </Link>
+          )}
+
+          {/* Category Chips Bar */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={() => handleCategorySelect(cat.key)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                  selectedCategory === cat.key
+                    ? "bg-primary-600 text-white border-primary-600 shadow-xs"
+                    : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+              >
+                <Icon name={cat.icon} size={14} />
+                <span>{cat.label}</span>
+              </button>
+            ))}
           </div>
-        )}
 
-        {refreshNotice && (
-          <div className="mb-4 p-3 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 rounded-xl text-xs font-semibold flex items-center justify-between">
-            <span>{refreshNotice}</span>
-            <button type="button" onClick={() => setRefreshNotice(null)} className="ml-2 text-xs font-bold opacity-80 hover:opacity-100">✕</button>
-          </div>
-        )}
-
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 no-scrollbar">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.key}
-              type="button"
-              onClick={() => handleCategorySelect(cat.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                selectedCategory === cat.key
-                  ? "bg-primary-600 text-white shadow-md shadow-primary-500/20"
-                  : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700/60"
-              }`}
-            >
-              <Icon name={cat.icon} size={15} />
-              <span>{cat.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Controls: Search, Sort, Refresh */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-sm">
-          <div className="relative flex-1 min-w-[240px]">
-            <input
-              type="text"
-              placeholder="Search feed by keyword, tag, or location..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/60 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-            <div className="absolute left-3 top-2.5 text-slate-400">
-              <Icon name="search" size={14} />
+          {/* Search, Sort, Refresh Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs text-xs">
+            <div className="relative flex-1 min-w-[200px]">
+              <input
+                type="text"
+                placeholder="Search feed by keyword or source..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <Icon name="search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <span>Sort:</span>
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 font-semibold">Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700/60 focus:outline-none"
+                className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none"
               >
                 <option value="published">Latest Published</option>
                 {hasProfile && <option value="score">Highest AI Match</option>}
                 <option value="reliability">Source Reliability</option>
               </select>
+
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition-colors"
+                title="Refresh Feed"
+              >
+                <Icon name="refresh" size={15} />
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/60 transition-all"
-              title="Refresh Feed"
-            >
-              <Icon name="refresh" size={15} />
-            </button>
           </div>
-        </div>
 
-        {/* Error Banner */}
-        {errorMsg && (
-          <div className="mb-6 p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center space-y-3">
-            <p className="text-sm font-semibold text-red-600 dark:text-red-400">{errorMsg}</p>
-            <button
-              type="button"
-              onClick={loadInitialFeed}
-              className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow transition-all"
-            >
-              Retry Connection
-            </button>
-          </div>
-        )}
+          {/* User-Friendly Error Banner (if API error occurs) */}
+          {errorMsg && (
+            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/50 shadow-xs text-center space-y-3">
+              <Icon name="alert" size={28} className="mx-auto text-red-500" />
+              <h3 className="font-extrabold text-base text-slate-900 dark:text-white">{errorMsg}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Please try again in a moment.</p>
+              <button
+                type="button"
+                onClick={loadInitialFeed}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow-xs transition-colors inline-flex items-center gap-2"
+              >
+                <Icon name="refresh" size={14} />
+                <span>Retry Connection</span>
+              </button>
+            </div>
+          )}
 
-        {/* Feed Grid with LeftSidebar Rail */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+          {/* Feed Cards List / Skeleton Loaders */}
           <div className="space-y-4">
             {loading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="p-6 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 animate-pulse space-y-3">
-                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/4" />
-                    <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
-                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2" />
+                  <div key={n} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+                      <div className="space-y-1 flex-1">
+                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
+                        <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
+                      </div>
+                    </div>
+                    <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full" />
                   </div>
                 ))}
               </div>
@@ -478,40 +421,40 @@ function ForYouContent() {
                       item={item}
                       matchScore={rec ? rec.score : undefined}
                       reasons={rec ? rec.reasons : undefined}
-                      isSavedInitial={savedIds.has(item.id)}
-                      onToggleSave={handleToggleSaveItem}
+                      isSavedInitial={isSaved(item.id)}
+                      onToggleSave={(i, s) => toggleSave(i.id)}
                       onHide={handleHideItem}
                     />
                   );
                 })}
               </div>
-            ) : (
-              <div className="p-12 text-center rounded-3xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60">
-                <Icon name="search" size={32} className="mx-auto text-slate-400 mb-3" />
-                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No current updates were found.</h3>
+            ) : !errorMsg ? (
+              <div className="p-10 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+                <Icon name="search" size={28} className="mx-auto text-slate-400" />
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">No updates found</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {searchTerm ? `No items matched your search for "${searchTerm}".` : "Check back later for new feed items."}
+                  {searchTerm ? `No items matched "${searchTerm}".` : "Check back later for new updates."}
                 </p>
               </div>
-            )}
+            ) : null}
 
-            {/* Infinite Scroll Sentinel */}
+            {/* Continuous Infinite Scroll Sentinel */}
             {hasMore && !loading && (
-              <div ref={sentinelRef} className="py-8 text-center">
+              <div ref={sentinelRef} className="py-6 text-center">
                 {loadingMore && (
                   <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500">
-                    <Icon name="refresh" size={14} className="animate-spin text-primary-500" />
+                    <Icon name="refresh" size={14} className="animate-spin text-primary-600" />
                     <span>Loading more updates...</span>
                   </div>
                 )}
               </div>
             )}
           </div>
+        </div>
 
-          {/* Right Rail: Profile & Quick Links */}
-          <div className="sticky top-20">
-            <LeftSidebar />
-          </div>
+        {/* RIGHT COLUMN: Latest Opportunities & Information Rail */}
+        <div className="hidden lg:block sticky top-20">
+          <RightSidebar />
         </div>
       </div>
     </AppShell>

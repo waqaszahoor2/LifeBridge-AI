@@ -3,8 +3,6 @@
 import type { ReactNode } from "react";
 import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
-import { Sidebar } from "./Sidebar";
-
 import { AppFooter } from "./layout/AppFooter";
 import { FloatingAssistantButton } from "./ui/FloatingAssistantButton";
 
@@ -22,23 +20,19 @@ export function AppShell({
   isRefreshing?: boolean;
 }) {
   return (
-    <div className="lb-app-shell-root">
-      <Sidebar />
-      <div className="lb-app-main-column">
-        <Header
-          pageTitle={pageTitle}
-          pageSubtitle={pageSubtitle}
-          onRefresh={onRefresh}
-          isRefreshing={isRefreshing}
-        />
-        <main id="main-content" className="lb-app-content-body flex-1">{children}</main>
-        <AppFooter />
-      </div>
+    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white font-sans antialiased">
+      <Header
+        pageTitle={pageTitle}
+        pageSubtitle={pageSubtitle}
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
+      />
+      <main id="main-content" className="flex-1 w-full max-w-[1200px] mx-auto px-4 py-6">
+        {children}
+      </main>
+      <AppFooter />
       <FloatingAssistantButton />
       <MobileNav />
     </div>
   );
 }
-
-
-

@@ -16,6 +16,11 @@ export default function HelpPage() {
       pageSubtitle="Get assistance, report bugs, ask questions, or learn about platform limitations."
     >
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-8">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Help & Support Centre</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Get assistance, report bugs, ask questions, or learn about platform limitations.</p>
+        </div>
+
         {/* Emergency Notice */}
         <div
           role="alert"
