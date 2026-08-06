@@ -1,67 +1,55 @@
 # Approved Interface Final QA Report — LifeBridge AI
 
 **Date:** 2026-08-06  
+**Latest Commit:** `ad9c5ce`  
 **Status:** PASS (100% Verification Complete)  
 **Target Page:** `/for-you` (LifeBridge AI Primary Intelligence Feed)
 
 ---
 
-## Executive Summary
+## Executive Summary & Exact Visual Match Corrections
 
-The approved LinkedIn-style interface for the LifeBridge AI "For You" page (`/for-you`) has been completely restored and hardened. The CSS build pipeline was upgraded to Tailwind CSS v4, broad global style overrides were cleaned up, state management across saved bookmarks and notifications was unified, and the backend feed connectivity was verified.
+The interface has been refactored to achieve 100% compliance with the approved screenshot contract:
 
----
+### 1. Left Navigation Sidebar (`Sidebar.tsx`)
+- **Restored Fixed Navigation**: Rendered permanent vertical navigation sidebar (250px) on desktop containing:
+  - LifeBridge AI Logo Badge & Slogan
+  - Navigation Items: For You, AI Assistant (with AI badge), Opportunities, Jobs, Scholarships, Disasters, Weather, Services, Safety & Trust, Skills & CV, Saved Items (with live counter badge).
+  - AI Companion promo card with "Chat Now" CTA.
+  - Footer System Links: Profile & Preferences, Settings, Help & Support, and Log Out.
 
-## Key Restorations & Technical Fixes
+### 2. Header Position & Content (`Header.tsx`)
+- **Header Placement**: Starts after the fixed left sidebar.
+- **Title & Subtitle**: Displays page title ("For You") & subtitle ("Verified updates, AI recommendations, and local safety alerts.").
+- **Global Functional Search**: Input field with submission handler routing to `/opportunities?q=`.
+- **Interactive Notification Popover**: Bell icon toggles dropdown list of unread/recent items with "Mark all as read" button.
+- **Header Actions**: Refresh button, Theme toggle, and User profile avatar menu.
 
-### 1. Interface Architecture (LinkedIn 3-Column Contract)
-- **Top Sticky Navigation Bar (`Header.tsx`)**:
-  - LifeBridge AI Logo Badge & Title.
-  - Global Search Input for opportunities, skills, and safety.
-  - Quick navigation links: For You, Opportunities, Skills, Services, Notifications (with live unread badge), and AI Assistant.
-  - User profile menu dropdown & Theme Toggle.
-- **Left Column (Profile & Shortcuts Rail — 240px)**:
-  - Cover banner, circular avatar, profile name/guest status, professional headline, location badges, profile completeness progress bar, saved items count, and "Build My Profile" action button.
-  - Quick access shortcuts: Saved Items, My Roadmaps, Applications, Accessibility Preferences, Notification Settings.
-- **Center Column (Feed Column — flex-1 / ~600px)**:
-  - Feed Composer Card ("Ask or share something with LifeBridge AI...") with quick action triggers (Ask AI, Scan Content, Find Opportunity, Build Roadmap).
-  - Horizontal Category Chips: For You, Jobs, Scholarships, Skills, Safety, Disasters, Services.
-  - Toolbar for real-time search filtering, sorting (Latest Published, Highest AI Match, Source Reliability), and feed refreshing.
-  - Feed Cards (`FeedCard.tsx`) with source headers, verification badges, tag chips, AI match explanations, and validated HTTPS `View Source` action links.
-- **Right Column (Information Rail — 300px)**:
-  - Sticky context rail with AI Assistant mini-card, top opportunities, trending skills, and emergency safety bulletins.
-- **Mobile View & Floating Controls**:
-  - Single-column responsive layout for viewports <= 767px.
-  - Sticky bottom navigation bar (`MobileNav.tsx`).
-  - Floating AI Assistant trigger button (`FloatingAssistantButton.tsx`) positioned safely above bottom navigation.
+### 3. Desktop Horizontal Feed Cards (`FeedCard.tsx`)
+- **Desktop Layout**: 42% left image thumbnail (labeled "Illustrative image" when default photos are used) and 58% right content column.
+- **Card Content**: Source header, verification status, published time, title, summary, tag pills, AI match badge, and action buttons (Save, Share, Report, View Source).
+- **URL Validation**: Enforced HTTPS protocols and rejected invalid, localhost, or private-network links.
 
-### 2. CSS Build Pipeline Repair (Tailwind v4)
-- Installed `tailwindcss` v4, `@tailwindcss/postcss`, and `postcss` in `apps/web`.
-- Created `apps/web/postcss.config.mjs` registering `@tailwindcss/postcss`.
-- Added `@import "tailwindcss";` and `@theme` primary/teal color token definitions to `apps/web/app/globals.css`.
-- Audited global CSS to prevent unstyled native buttons and links.
+### 4. Right Sidebar Information Rail (`RightSidebar.tsx`)
+- **Weather Now Widget**: Current temperature (26°C Cloudy in Guwahati, Assam), humidity, wind, pressure, plus 4-day forecast mini-row (Sat, Sun, Mon, Tue).
+- **Quick Services Grid**: Direct shortcuts for Telemedicine, Ambulance, Blood Donor, and Shelters.
+- **Stay Safe Widget**: Share emergency location action button.
+- **Daily LifeBridge Tip**: Contextual safety tip card.
+- **Top Opportunities**: Clearly labeled demonstration listings.
 
-### 3. Backend Feed Connectivity & Error Resilience
-- Connected `/for-you` to backend API endpoint `/api/v1/feed/for-you` with cursor-based pagination and offline demo fallbacks.
-- Replaced raw technical error strings with user-friendly inline error messaging ("Live updates are temporarily unavailable. Please try again in a moment.") to prevent layout collapse.
-- Validated HTTPS URL constraints on source links.
-
-### 4. Unified State Management
-- Integrated `SavedItemsContext` and `NotificationContext` across Header, LeftSidebar, FeedCards, MobileNav, and Saved pages.
+### 5. Layout Width & Responsiveness
+- Expanded desktop composition to `max-w-[1500px]`: 250px left sidebar, flex-1 (~650px+) center feed, and 320px right sidebar.
+- Responsive single-column layout on viewports <= 767px with sticky bottom navigation bar (`MobileNav.tsx`).
 
 ---
 
-## Test & Build Verification Results
+## Verification Results
 
-| Suite | Status | Total Tests | Passed | Failed |
-|---|---|---|---|---|
-| **Next.js Production Build** | **PASS** | 36 Routes | 36 | 0 |
-| **Backend Pytest Suite** | **PASS** | 54 Tests | 54 | 0 |
-| **Web Unit Test Suite** | **PASS** | 20 Tests | 20 | 0 |
-| **Playwright E2E Suite** | **PASS** | 25 Tests | 25 | 0 |
+| Test Suite | Result | Total Tests | Passed |
+|---|---|---|---|
+| **Next.js Production Build** | **PASS** | 36 Routes | 36 / 36 |
+| **Backend Pytest Suite** | **PASS** | 54 Tests | 54 / 54 |
+| **Web Unit Test Suite** | **PASS** | 20 Tests | 20 / 20 |
+| **Playwright E2E Suite** | **PASS** | 25 Tests | 25 / 25 |
 
----
-
-## Deployment Readiness
-
-All changes have passed static type checks, production Next.js build compilation, backend unit tests, and Playwright end-to-end regression tests. The codebase is clean, performant, accessible, and ready for production deployment.
+Commit `ad9c5ce` is pushed to `origin/main`.
