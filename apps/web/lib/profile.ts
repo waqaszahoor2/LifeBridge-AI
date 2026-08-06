@@ -44,15 +44,15 @@ export function saveLocalProfile(profile: LocalRecommendationProfile): void {
 export const saveStoredProfile = saveLocalProfile;
 
 export const defaultProfile: LocalRecommendationProfile = {
-  name: "Local Demo Profile",
-  country: "Pakistan",
-  city: "Islamabad",
-  study_level: "Bachelor's Degree",
-  field_of_study: "Computer Science",
-  skills: ["Python", "SQL", "Data Analysis"],
-  interests: ["Data Science", "AI", "Scholarships"],
-  preferred_categories: ["job", "scholarship", "disaster", "weather", "service", "safety", "learning"],
-  target_goal: "Entry-level Data Science & Software Engineering Roles",
-  opportunity_type: "Full-time / Remote / Scholarships",
-  notification_pref: "daily_email",
+  name: "",
+  country: "",
+  city: "",
+  study_level: "",
+  field_of_study: "",
+  skills: [],
+  interests: [],
+  preferred_categories: [],
+  target_goal: "",
+  opportunity_type: "",
+  notification_pref: "",
 };

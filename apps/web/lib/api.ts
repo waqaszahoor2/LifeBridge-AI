@@ -367,6 +367,7 @@ export async function streamAssistantChat(
 
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
+  let receivedMeta = false;
   let receivedDone = false;
 
   try {
@@ -387,48 +388,63 @@ export async function streamAssistantChat(
         try {
           parsed = JSON.parse(jsonStr);
         } catch {
-          continue; // Ignore malformed JSON chunks
+          continue;
         }
 
-        // Handle SSE event types OUTSIDE try/catch so errors propagate!
-        if (parsed.type === "meta" && onMeta) {
-          onMeta({
-            provider: parsed.provider,
-            status: parsed.status,
-            model: parsed.model,
-            citations: parsed.citations || [],
-          });
+        if (parsed.type === "error") {
+          throw new Error(parsed.message || "Streaming provider error encountered");
+        }
+
+        if (parsed.type === "meta") {
+          receivedMeta = true;
+          if (onMeta) {
+            onMeta({
+              provider: parsed.provider,
+              status: parsed.status,
+              model: parsed.model,
+              citations: parsed.citations || [],
+            });
+          }
         } else if (parsed.type === "token" && parsed.content) {
           onToken(parsed.content);
         } else if (parsed.type === "done") {
           receivedDone = true;
-        } else if (parsed.type === "error") {
-          throw new Error(parsed.message || "Streaming provider error encountered");
         }
       }
     }
 
-    // Flush remaining decoder buffer
     buffer += decoder.decode();
     if (buffer.startsWith("data: ")) {
       const jsonStr = buffer.replace(/^data:\s*/, "").trim();
       if (jsonStr) {
+        let parsed: any;
         try {
-          const parsed = JSON.parse(jsonStr);
+          parsed = JSON.parse(jsonStr);
+        } catch {
+          // ignore
+        }
+        if (parsed) {
+          if (parsed.type === "error") throw new Error(parsed.message || "Streaming provider error");
+          if (parsed.type === "meta") receivedMeta = true;
           if (parsed.type === "token" && parsed.content) onToken(parsed.content);
           if (parsed.type === "done") receivedDone = true;
-          if (parsed.type === "error") throw new Error(parsed.message);
-        } catch (e) {
-          if (e instanceof Error && e.message.includes("Streaming provider error")) throw e;
         }
       }
+    }
+
+    if (!receivedMeta && !signal?.aborted) {
+      throw new Error("Stream closed before receiving meta metadata event.");
     }
 
     if (!receivedDone && !signal?.aborted) {
       throw new Error("Stream closed unexpectedly before completion done event.");
     }
   } finally {
-    reader.cancel().catch(() => {});
+    try {
+      await reader.cancel();
+    } catch {
+      // ignore cancel error
+    }
   }
 }
 

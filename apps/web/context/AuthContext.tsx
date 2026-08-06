@@ -11,10 +11,8 @@ export interface UserProfile {
 interface AuthContextType {
   isAuthenticated: boolean;
   user: UserProfile | null;
-  unreadCount: number;
   login: (email: string, name?: string) => void;
   logout: () => void;
-  setUnreadCount: (count: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,7 +20,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [unreadCount, setUnreadCountState] = useState<number>(0);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   useEffect(() => {
@@ -64,19 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setUnreadCount = (count: number) => {
-    setUnreadCountState(count);
-  };
-
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated,
         user,
-        unreadCount,
         login,
         logout,
-        setUnreadCount,
       }}
     >
       {children}

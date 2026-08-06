@@ -1,244 +1,96 @@
-# LifeBridge AI — Final Frontend & Backend Repair Plan
+# Master Production Repair Plan — LifeBridge AI
 
-> **Created:** 2026-08-06  
-> **Latest Commit:** `b6bd657` (with uncommitted local modifications)  
-> **Branch:** `main`  
-> **Remote:** `https://github.com/waqaszahoor2/LifeBridge-AI.git`  
-> **Production Frontend:** `https://life-bridge-ai-ten.vercel.app/`  
-> **Production Backend:** `https://lifebridge-ai-backend.onrender.com` (**DOWN — timeout / 404**)
+**Architect:** Principal Next.js, FastAPI, Groq, Redis & Production QA Engineer  
+**Target Completion:** August 6, 2026  
+**Status:** **IN PROGRESS**
 
 ---
 
-## 1. Current Architecture
+## Executive Summary & Repair Strategy
 
-```
-LifeBridge_AI_End_to_End/
-├── apps/web/          — Next.js 16.3 frontend (Vercel)
-│   ├── app/           — 25+ routes (for-you, assistant, etc.)
-│   ├── components/    — AppShell, Header, Sidebar, FeedCard, etc.
-│   ├── context/       — AuthContext (sole provider)
-│   ├── lib/           — api.ts, sample-data.ts, types.ts, profile.ts, env.ts, firebase.ts
-│   └── tests/         — 1 Playwright test file (5 basic tests)
-├── apps/backend/      — FastAPI backend (Render)
-│   ├── app/
-│   │   ├── api/routes/ — 13 route modules
-│   │   ├── core/       — config, database, middleware, rate_limit, security
-│   │   └── services/   — groq_service, skills_engine, recommendation, etc.
-│   └── tests/          — 9 test files (basic coverage)
-├── docs/              — 49 markdown docs (mostly outdated)
-└── vercel.json        — Root-level Vercel config
-```
+To resolve all production integrity issues and achieve 100% approval, we are implementing a zero-fallback, strictly truthful architecture. Fabricated emergency alerts, hard-coded default profiles, fake recommendation scores, swallowed SSE errors, and silent demo-mode fallbacks are being systematically eliminated.
 
 ---
 
-## 2. Confirmed Frontend Defects
+## 16-Step Repair Blueprint
 
-### 2.1 No Shared Application Shell Contexts
-- **Only `AuthContext` exists.** No `NotificationContext`, `ThemeContext`, `LanguageContext`, `SavedItemsContext`, or `DataModeContext`.
-- Theme state lives inside `Header.tsx` — not synchronized across routes.
-- Saved items are managed per-page with raw `localStorage`, no shared state.
-- Notification count lives in `AuthContext.unreadCount` but starts at `0` correctly; however, no `NotificationProvider` with structured notifications exists.
+### 1. Unified Notification State
+- Remove `unreadCount` and `setUnreadCountState` from `AuthContext` completely.
+- Use `NotificationContext` as the sole notification state manager.
+- Guarantee guest unread notification count is strictly `0`.
 
-### 2.2 Duplicate/Orphaned Components
-- `LeftSidebar.tsx` exists alongside `Sidebar.tsx` — different implementations.
-- `TopBar.tsx` imported by `LoginPage` but not used by most routes.
-- `RightSidebar.tsx` exists but is unused.
+### 2. Emergency Alerts Cleanup
+- Delete all hard-coded and timed emergency records from `app/for-you/page.tsx` (Assam/Bihar IMD alert, NDMA Pakistan alert, 18s `setTimeout`).
+- Remove fake current timestamps, fake verified status, fake reliability scores, and fake affected regions.
 
-### 2.3 Sample Data Contains Fabricated Content
-- `sample-data.ts` contains fabricated organizations: "National Disaster Management Authority", "Pakistan Meteorological Department", "Open AI Research Lab", "LifeBridge Security & Fraud Verification Unit", "LifeBridge Career Academy" — all with `verification_status: "verified"` and high `source_reliability` scores.
-- These display as "verified" in demo mode, violating data honesty rules.
+### 3. Direct Sample Feed Removal
+- Remove direct `sampleFeed` fallback imports in `For You` (`app/for-you/page.tsx`) and `Opportunities` (`app/opportunities/page.tsx`).
+- In live mode (`NEXT_PUBLIC_DEMO_MODE=false`), display standard empty or error states when live backend calls fail or return no data.
 
-### 2.4 Missing Frontend `/api/build-info` Configuration
-- `built_at` returns `"NOT_CONFIGURED_BUILD_TIMESTAMP"` in production.
-- `APP_BUILD_TIMESTAMP` env var is not set on Vercel.
+### 4. Strict `NEXT_PUBLIC_DEMO_MODE` Enforcement
+- When `NEXT_PUBLIC_DEMO_MODE=false`: On network or API failure, render explicit `ErrorState` or `EmptyState`. Never silently enter demo mode.
+- When `NEXT_PUBLIC_DEMO_MODE=true`: Render explicitly labeled demonstration records with `verification_status: "demo"` and `data_mode: "demo"`.
 
-### 2.5 Stale CSP Configuration
-- `next.config.ts` CSP `connect-src` includes `http://localhost:8000 https:` — overly permissive in production.
+### 5. Require HTTPS API Base URL in Production
+- Remove `http://localhost:8000` fallback in production (`lib/config.ts` and `lib/api.ts`).
+- Require `NEXT_PUBLIC_API_BASE_URL` to point to the secure production HTTPS endpoint.
 
-### 2.6 Missing Routes from Sidebar
-- `decision-graph`, `accessibility`, `weather` routes exist but are not all in the sidebar navigation.
+### 6. Truthful Action Handlers
+- Remove deceptive optimistic responses ("queued refresh", "received report", fake local progress).
+- Return success messages and UI state updates strictly after confirmed backend 2xx responses.
 
-### 2.7 No Footer Component
-- Build version displays only in `LeftSidebar.tsx` line 140, hardcoded as "v1.0.0".
+### 7. Remove Hard-Coded Recommendation Profile
+- Remove default Pakistan/Python/data-science fallback profile in `lib/profile.ts` and `for-you/page.tsx`.
+- Require an actual user-created local profile or prompt the user with "Complete your profile to receive personalized recommendations."
 
-### 2.8 No `providers.tsx` Wrapper
-- `layout.tsx` only wraps with `AuthProvider`. Missing theme, notification, saved items, data mode providers.
+### 8. Eliminate Fabricated Recommendation Scores
+- Remove local synthetic score generators and fake "Verified content from..." citations when live recommendations are unavailable.
 
-### 2.9 Assistant Page Provider Badge Issues
-- Provider badge for `"pending"` falls to the default "System Message" case instead of showing "Pending".
+### 9. Remove Fake Roadmaps & Mentor Responses
+- In live mode (`NEXT_PUBLIC_DEMO_MODE=false`), remove synthetic roadmaps and "Phase X Roadmap Guidelines" citations upon API failure.
 
-### 2.10 Missing Pages/Content
-- No `404.tsx` custom page.
-- No `error.tsx` error boundary.
-- No `loading.tsx` route-level loading states.
-- No sitemap or robots.txt.
+### 10. Robust SSE Streaming Client (`streamAssistantChat`)
+- Validate response status (`response.ok`).
+- Validate `Content-Type` header (`text/event-stream`).
+- Require `meta` event before tokens.
+- Require `done` event.
+- Propagate error events immediately; do not swallow SSE errors.
+- Flush stream decoder and process final buffer bytes.
+- Cancel reader in `finally` block and fail on premature stream closure.
 
----
+### 11. Protect Backend System Prompt
+- Always prepend the server-controlled system prompt in `apps/backend/app/services/groq_service.py`.
+- Reject `system`, `tool`, or `developer` roles supplied by clients with HTTP 422 validation errors.
+- Accept only `user` and `assistant` client roles.
+- Add HTTP 422 tests in backend pytest suite.
 
-## 3. Confirmed Backend Defects
+### 12. Strict `ASSISTANT_DEMO_MODE` Backend Enforcement
+- `ASSISTANT_DEMO_MODE=false` + missing API key: Raise `CONFIGURATION_MISSING` HTTP 500/503.
+- `ASSISTANT_DEMO_MODE=false` + Groq failure: Raise typed provider error.
+- `ASSISTANT_DEMO_MODE=true`: Allow labeled `local_demo` fallback.
 
-### 3.1 Backend is DOWN
-- `https://lifebridge-ai-backend.onrender.com` — **timeout / 404**
-- Render free-tier services sleep after inactivity.
+### 13. Independent Disconnect Watcher
+- Implement an async task race (`asyncio.wait` / `asyncio.create_task`) between client disconnect checks (`request.is_disconnected()`) and Groq token generation.
+- Ensure Stop Generation cancels stalled Groq requests immediately without waiting for the next token.
 
-### 3.2 Groq Service Uses Synchronous Client for Non-Streaming
-- `call_groq_chat()` uses synchronous `Groq()` client — blocks the event loop.
+### 14. Deployment & Build Info Verification
+- Ensure `/api/build-info` route returns actual commit SHA and dynamic ISO timestamp.
 
-### 3.3 Error Details Leak Provider Class Names
-- HTTP response includes `f"Groq provider request failed: {type(err).__name__}"` — **exposes internals to client**.
-- SSE error includes `type(err).__name__` — **exposes to stream**.
+### 15. Comprehensive Playwright Test Suite
+- Expand `tests/production_integrity.spec.ts` to test:
+  - Zero hard-coded emergency content on For You.
+  - Zero sample feed fallbacks in live mode.
+  - Report/refresh failure honesty.
+  - Notification count strictly 0.
+  - SSE error propagation and meta/token/done validation.
+  - Stop Generation capability.
+  - System role rejection (HTTP 422).
+  - Production build-info verification.
 
-### 3.4 Health Readiness Creates New Redis Client
-- `health.py` creates a **new** `redis.Redis.from_url()` on every readiness check.
-
-### 3.5 No Client Disconnect Racing in Stream
-- Stream endpoint checks `request.is_disconnected()` but only between Groq chunks.
-
-### 3.6 Schema Mismatch
-- Backend `RoadmapResponse.mode_used` allows only `"ai_generated"` and `"structured_template"` — missing `"local_demo"`.
-
-### 3.7 Missing `data_mode` Field on Backend Schemas
-- `FeedItemOut` and `NearbyServiceOut` don't include a `data_mode` field.
-
----
-
-## 4. Deployment Defects
-
-| Defect | Status |
-|--------|--------|
-| Backend completely unreachable (Render timeout/404) | **CRITICAL** |
-| Frontend `built_at` shows `NOT_CONFIGURED_BUILD_TIMESTAMP` | **MEDIUM** |
-| `APP_BUILD_TIMESTAMP` not configured in Vercel env | **MEDIUM** |
-| Two `vercel.json` files (root + `apps/web/`) | **LOW** |
-
----
-
-## 5. Data Integrity Defects
-
-| Defect | Location |
-|--------|----------|
-| Sample data uses `verification_status: "verified"` | `sample-data.ts` |
-| Sample data uses real-sounding org names | `sample-data.ts` |
-| Sample data has high `source_reliability` (0.88–0.98) | `sample-data.ts` |
-| `LeftSidebar.tsx` shows "GU" initials for guest | Line 78 |
-
----
-
-## 6. Security Defects
-
-| Defect | Severity |
-|--------|----------|
-| CSP `connect-src` allows `http://localhost:8000 https:` | **HIGH** |
-| Error responses leak Groq class names | **MEDIUM** |
-| Firebase API key in `.env.local` | **MEDIUM** |
-
----
-
-## 7. Accessibility Defects
-
-| Defect | Location |
-|--------|----------|
-| No skip-to-content link | `layout.tsx` |
-| Emoji-only button labels | Multiple pages |
-| Notification aria-label incorrect for 0 count | `Header.tsx` |
-| No focus trap on FeedCard modal | `FeedCard.tsx` |
-| No `aria-live` region for streaming | `assistant/page.tsx` |
-| No reduced-motion support | CSS |
-
----
-
-## 8. Root Causes
-
-1. **No shared state architecture** — each page manages independently.
-2. **Backend sleeping on free tier** — Render hibernates.
-3. **Iterative development without refactoring** — duplicate components.
-4. **Sample data designed for visual demo, not honesty** — uses "verified" and real org names.
-5. **No CI/CD pipeline** — no automated testing before deployment.
-6. **Missing deployment environment configuration.**
-
----
-
-## 9. Files to Create
-
-| File | Purpose |
-|------|---------|
-| `apps/web/app/providers.tsx` | Shared context providers wrapper |
-| `apps/web/context/NotificationContext.tsx` | Notification state management |
-| `apps/web/context/ThemeContext.tsx` | Theme persistence |
-| `apps/web/context/SavedItemsContext.tsx` | Shared saved items state |
-| `apps/web/context/DataModeContext.tsx` | Global demo/live mode state |
-| `apps/web/components/layout/AppFooter.tsx` | Footer with build info |
-| `apps/web/components/states/LoadingState.tsx` | Reusable loading skeleton |
-| `apps/web/components/states/EmptyState.tsx` | Reusable empty state |
-| `apps/web/components/states/ErrorState.tsx` | Reusable error with retry |
-| `apps/web/components/states/DemoDataNotice.tsx` | Demo mode banner |
-| `apps/web/app/not-found.tsx` | Custom 404 page |
-| `apps/web/app/error.tsx` | Error boundary |
-| `apps/web/app/sitemap.ts` | Dynamic sitemap |
-| `apps/web/app/robots.ts` | Robots.txt |
-| `apps/web/lib/errors.ts` | Typed error codes |
-| `apps/web/lib/config.ts` | Central configuration |
-
----
-
-## 10. Files to Modify
-
-| File | Changes |
-|------|---------|
-| `apps/web/app/layout.tsx` | Semantic HTML, skip-to-content, providers |
-| `apps/web/components/AppShell.tsx` | Add footer |
-| `apps/web/components/Header.tsx` | Fix notification label, use theme context |
-| `apps/web/components/Sidebar.tsx` | Add missing navigation routes |
-| `apps/web/lib/api.ts` | Typed errors, timeouts, safe error mapping |
-| `apps/web/lib/sample-data.ts` | Generic demo names, `verification_status: "demo"` |
-| `apps/web/lib/types.ts` | Add `data_mode` field |
-| `apps/web/next.config.ts` | Fix CSP `connect-src` |
-| `apps/web/app/for-you/page.tsx` | Improve states |
-| `apps/web/app/assistant/page.tsx` | Fix pending badge |
-| `apps/backend/app/services/groq_service.py` | Fix error exposure |
-| `apps/backend/app/api/routes/assistant.py` | Fix stream disconnect |
-| `apps/backend/app/api/routes/health.py` | Use singleton Redis |
-| `apps/backend/app/schemas.py` | Add data_mode, fix mode_used |
-| `apps/backend/app/core/middleware.py` | Improve security headers |
-
----
-
-## 11. Files to Remove
-
-| File | Reason |
-|------|--------|
-| `apps/web/components/RightSidebar.tsx` | Unused |
-| `apps/web/components/TopBar.tsx` | Duplicate |
-| `apps/web/components/StatsGrid.tsx` | Unused, may contain fake stats |
-
----
-
-## 12. Test Strategy
-
-### Backend: `cd apps/backend && python -m pytest tests/ -q`
-### Frontend: `cd apps/web && npm run lint && npm run typecheck && npm run build && npx playwright test`
-
----
-
-## 13. Deployment Strategy
-
-1. Fix all code defects → 2. Test locally → 3. Commit and push → 4. Verify deployments → 5. Run production tests
-
----
-
-## 14. Rollback Strategy
-
-- Git revert to `b6bd657`
-- Vercel instant rollback via dashboard
-- Render rollback via re-deploy
-
----
-
-## 15. Execution Order
-
-### Phase A: Foundation (Contexts & Shared State)
-### Phase B: Data Honesty (Sample data, error mapping)
-### Phase C: Frontend Pages (All route fixes)
-### Phase D: Backend Fixes (Groq error safety, health, schemas)
-### Phase E: Testing (Backend tests, Playwright E2E)
-### Phase F: Deployment & Verification
+### 16. Verification Cycle
+- Run backend pytest (24+ tests).
+- Run TypeScript typecheck.
+- Run Next.js production build (36 routes).
+- Run local Playwright suite.
+- Commit & push to GitHub (`git push origin main`).
+- Run production Playwright suite against live URL.

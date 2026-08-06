@@ -19,17 +19,16 @@ export function isProduction(): boolean {
 export function getApiBaseUrl(): string {
   if (isProduction()) {
     if (!configuredApiUrl) {
-      throw new Error(
-        "[Configuration Error] NEXT_PUBLIC_API_BASE_URL is required in the production environment."
-      );
+      return "https://lifebridge-ai-backend.onrender.com/api/v1";
     }
     if (!configuredApiUrl.startsWith("https://")) {
       throw new Error(
         "[Configuration Error] NEXT_PUBLIC_API_BASE_URL must begin with https:// in production."
       );
     }
+    return configuredApiUrl.replace(/\/$/, "");
   }
-  return configuredApiUrl ? configuredApiUrl.replace(/\/$/, "") : "http://localhost:8000";
+  return configuredApiUrl ? configuredApiUrl.replace(/\/$/, "") : "http://localhost:8000/api/v1";
 }
 
 export const API_BASE_URL = getApiBaseUrl();

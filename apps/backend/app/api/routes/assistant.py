@@ -164,22 +164,42 @@ async def assistant_chat_stream(payload: AssistantChatRequest, request: Request,
     req_id = f"req_{uuid.uuid4().hex[:8]}"
 
     async def event_generator():
+        stream_aiter = stream_groq_chat_async(
+            messages=messages_data,
+            mode=payload.mode,
+            temperature=payload.temperature,
+            max_tokens=payload.max_tokens,
+            roadmap_context=roadmap_context,
+            request_id=req_id,
+        ).__aiter__()
+
         try:
-            stream = stream_groq_chat_async(
-                messages=messages_data,
-                mode=payload.mode,
-                temperature=payload.temperature,
-                max_tokens=payload.max_tokens,
-                roadmap_context=roadmap_context,
-                request_id=req_id,
-            )
-
-            async for event in stream:
+            while True:
                 if await request.is_disconnected():
-                    logger.info(f"[Req {req_id}] Client disconnected during SSE stream. Stopping generator.")
+                    logger.info(f"[Req {req_id}] Client disconnected before fetching next token. Halting stream.")
                     break
-                yield f"data: {json.dumps(event)}\n\n"
 
+                fetch_task = asyncio.create_task(stream_aiter.__anext__())
+                disconnect_task = asyncio.create_task(request.is_disconnected())
+
+                done, pending = await asyncio.wait(
+                    [fetch_task, disconnect_task],
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+
+                if disconnect_task in done and disconnect_task.result():
+                    logger.info(f"[Req {req_id}] Client disconnect detected during token fetch. Cancelling stream.")
+                    fetch_task.cancel()
+                    break
+
+                if not disconnect_task.done():
+                    disconnect_task.cancel()
+
+                try:
+                    event = await fetch_task
+                    yield f"data: {json.dumps(event)}\n\n"
+                except StopAsyncIteration:
+                    break
         except Exception as err:
             logger.error(f"[Req {req_id}] Generator error: {type(err).__name__}")
             err_data = {
