@@ -7,12 +7,10 @@ import { FeedCard } from "@/components/FeedCard";
 import { FeedFilters, type CategoryKey, type SortMode } from "@/components/FeedFilters";
 import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightSidebar } from "@/components/RightSidebar";
-import { fetchForYouFeed, fetchRecommendations, triggerFeedRefresh } from "@/lib/api";
+import { fetchForYouFeed, fetchRecommendations, isDemoModeEnabled, triggerFeedRefresh } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
 import type { FeedItem } from "@/lib/types";
 import { Icon } from "@/components/ui/Icon";
-
-
 import Link from "next/link";
 
 export default function ForYouPage() {
@@ -37,7 +35,6 @@ export default function ForYouPage() {
   );
 }
 
-
 function ForYouFeedContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -54,16 +51,14 @@ function ForYouFeedContent() {
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  const [newUpdatesCount, setNewUpdatesCount] = useState<number>(0);
-  const [pendingNewItems, setPendingNewItems] = useState<FeedItem[]>([]);
-  const [lastSyncTime, setLastSyncTime] = useState<string>(new Date().toISOString());
-
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [seenIds, setSeenIds] = useState<Set<number>>(new Set());
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isDemo = isDemoModeEnabled();
 
   // Read saved item IDs from localStorage
   useEffect(() => {
@@ -95,7 +90,9 @@ function ForYouFeedContent() {
   // Fetch initial feed data
   const loadInitialFeed = useCallback(async () => {
     setLoading(true);
+    setErrorMsg(null);
     setIsOffline(false);
+
     try {
       const { data, live } = await fetchForYouFeed({
         category: selectedCategory === "all" ? undefined : selectedCategory,
@@ -110,17 +107,21 @@ function ForYouFeedContent() {
         setHasMore(data.has_more);
         setNextCursor(data.next_cursor);
       } else {
-        const filtered = sampleFeed.filter(
-          (i) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
-        );
-        setItems(filtered);
-        setSeenIds(new Set(filtered.map((i) => i.id)));
+        if (isDemoModeEnabled()) {
+          const filtered = sampleFeed.filter(
+            (i) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
+          );
+          setItems(filtered.map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" })));
+          setSeenIds(new Set(filtered.map((i) => i.id)));
+        } else {
+          setItems([]);
+        }
         setHasMore(false);
         setNextCursor(null);
       }
 
       // Load AI recommendation scores
-      const recs = await fetchRecommendations();
+      const recs = await fetchRecommendations().catch(() => []);
       if (recs && recs.length > 0) {
         const map: Record<number, { score: number; reasons: string[] }> = {};
         recs.forEach((r) => {
@@ -129,17 +130,23 @@ function ForYouFeedContent() {
         setRecommendations(map);
       }
     } catch {
-      setIsOffline(true);
-      const filtered = sampleFeed.filter(
-        (i) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
-      );
-      setItems(filtered);
-      setSeenIds(new Set(filtered.map((i) => i.id)));
-      setHasMore(false);
-      setNextCursor(null);
+      if (isDemoModeEnabled()) {
+        setIsOffline(true);
+        const filtered = sampleFeed.filter(
+          (i) => selectedCategory === "all" || selectedCategory === "latest" || i.category === selectedCategory
+        );
+        setItems(filtered.map((i) => ({ ...i, verification_status: "demo", data_mode: "demo" })));
+        setSeenIds(new Set(filtered.map((i) => i.id)));
+        setHasMore(false);
+        setNextCursor(null);
+      } else {
+        setErrorMsg("We could not load live feed updates. Please check backend API connectivity.");
+        setItems([]);
+        setHasMore(false);
+        setNextCursor(null);
+      }
     } finally {
       setLoading(false);
-      setLastSyncTime(new Date().toISOString());
     }
   }, [selectedCategory]);
 
@@ -149,7 +156,7 @@ function ForYouFeedContent() {
 
   // Load next cursor-paginated page
   const loadNextPage = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
+    if (loadingMore || !hasMore || errorMsg) return;
     setLoadingMore(true);
 
     try {
@@ -183,11 +190,11 @@ function ForYouFeedContent() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, seenIds, selectedCategory, nextCursor]);
+  }, [loadingMore, hasMore, errorMsg, seenIds, selectedCategory, nextCursor]);
 
   // IntersectionObserver for continuous infinite scroll
   useEffect(() => {
-    if (!sentinelRef.current || !hasMore || loading || loadingMore) return;
+    if (!sentinelRef.current || !hasMore || loading || loadingMore || errorMsg) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -204,23 +211,14 @@ function ForYouFeedContent() {
     return () => {
       if (currentSentinel) observer.unobserve(currentSentinel);
     };
-  }, [hasMore, loading, loadingMore, loadNextPage]);
-
-  const handleShowNewUpdates = () => {
-    if (pendingNewItems.length > 0) {
-      setItems((prev) => [...pendingNewItems, ...prev]);
-      setSeenIds((prev) => {
-        const next = new Set(prev);
-        pendingNewItems.forEach((i) => next.add(i.id));
-        return next;
-      });
-      setPendingNewItems([]);
-      setNewUpdatesCount(0);
-    }
-  };
+  }, [hasMore, loading, loadingMore, errorMsg, loadNextPage]);
 
   const handleManualRefresh = async () => {
-    await triggerFeedRefresh();
+    try {
+      await triggerFeedRefresh();
+    } catch {
+      // Ignore background trigger fail
+    }
     await loadInitialFeed();
   };
 
@@ -332,39 +330,41 @@ function ForYouFeedContent() {
           </div>
         </div>
 
-        {/* Top Urgent Emergency Alert Banner (Demonstration Alert) */}
-        <div className="lb-urgent-alert-banner" role="alert">
-          <div className="urgent-banner-left">
-            <div className="urgent-icon-circle">
-              <Icon name="alert" size={20} className="text-red" />
-            </div>
-            <div className="urgent-text-content">
-              <div className="urgent-header-row">
-                <span className="urgent-label-red">DEMONSTRATION ALERT — NOT A LIVE WARNING</span>
-                <span className="urgent-badge-high">UI Demo Notice</span>
+        {/* Render Top Urgent Emergency Alert Banner ONLY when Global Demo Mode is enabled */}
+        {isDemo && (
+          <div className="lb-urgent-alert-banner mb-6" role="alert">
+            <div className="urgent-banner-left">
+              <div className="urgent-icon-circle">
+                <Icon name="alert" size={20} className="text-red" />
               </div>
-              <p className="urgent-message-body">
-                This is a platform demonstration alert layout. Live emergency bulletins are sourced directly from verified regional disaster APIs when configured.
-              </p>
-              <div className="urgent-footer-row">
-                <a href="/disasters" className="urgent-action-link">
-                  View Disaster Bulletin Directory &gt;
-                </a>
-                <span className="urgent-source-meta">Source: LifeBridge AI Demo Layout • UI Demonstration Only</span>
+              <div className="urgent-text-content">
+                <div className="urgent-header-row">
+                  <span className="urgent-label-red">DEMONSTRATION ALERT — NOT A LIVE WARNING</span>
+                  <span className="urgent-badge-high">UI Demo Notice</span>
+                </div>
+                <p className="urgent-message-body">
+                  This is a platform demonstration alert layout. Live emergency bulletins are sourced directly from verified regional disaster APIs when configured.
+                </p>
+                <div className="urgent-footer-row">
+                  <a href="/disasters" className="urgent-action-link">
+                    View Disaster Bulletin Directory &gt;
+                  </a>
+                  <span className="urgent-source-meta">Source: LifeBridge AI Demo Layout • UI Demonstration Only</span>
+                </div>
               </div>
             </div>
+            <button
+              type="button"
+              className="urgent-close-btn"
+              onClick={(e) => {
+                (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+              }}
+              aria-label="Dismiss Alert"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            type="button"
-            className="urgent-close-btn"
-            onClick={(e) => {
-              (e.currentTarget.parentElement as HTMLElement).style.display = "none";
-            }}
-            aria-label="Dismiss Alert"
-          >
-            ✕
-          </button>
-        </div>
+        )}
 
         {/* Category Filters Chips */}
         <FeedFilters
@@ -381,30 +381,27 @@ function ForYouFeedContent() {
           <LeftSidebar />
           {/* Central Feed Column */}
           <section className="lb-center-feed-column" aria-label="Main Feed">
-            {/* New Updates Sticky Banner */}
-            {newUpdatesCount > 0 && (
-              <div className="new-updates-banner" role="alert">
-                <Icon name="bell" size={16} />
-                <span>{newUpdatesCount} new emergency update available</span>
+            {/* Offline Notification in Demo Mode */}
+            {isDemo && isOffline && (
+              <div className="offline-notice-banner mb-4" role="status">
+                📡 Live feed data is unavailable. Showing demonstration content.
+              </div>
+            )}
+
+            {/* Error Banner */}
+            {errorMsg ? (
+              <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center space-y-3 my-4" role="alert">
+                <div className="text-red-600 dark:text-red-400 font-bold text-base">We could not load live updates</div>
+                <p className="text-sm text-slate-600 dark:text-slate-300 max-w-md mx-auto">{errorMsg}</p>
                 <button
                   type="button"
-                  className="btn-show-updates"
-                  onClick={handleShowNewUpdates}
+                  className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm shadow transition-all"
+                  onClick={loadInitialFeed}
                 >
-                  Show new updates ↑
+                  Retry
                 </button>
               </div>
-            )}
-
-            {/* Offline Notification */}
-            {isOffline && (
-              <div className="offline-notice-banner" role="status">
-                📡 Live data is unavailable. Showing demonstration content.
-              </div>
-            )}
-
-            {/* Feed Cards Container */}
-            {loading ? (
+            ) : loading ? (
               <div className="feed-skeletons-list">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="lb-feed-card skeleton-card">
@@ -416,7 +413,7 @@ function ForYouFeedContent() {
               </div>
             ) : sortedItems.length === 0 ? (
               <div className="empty-feed-card">
-                <h3>No matching updates found</h3>
+                <h3>No current updates were found</h3>
                 <p>Try adjusting your category filter or search term.</p>
                 <button
                   type="button"
@@ -453,11 +450,11 @@ function ForYouFeedContent() {
                   <span>Loading more updates...</span>
                 </div>
               )}
-              {!hasMore && !loading && sortedItems.length > 0 && (
+              {!hasMore && !loading && !errorMsg && sortedItems.length > 0 && (
                 <div className="end-of-feed-card">
                   <div className="end-text">
                     <span className="infinity-symbol">♾</span>
-                    <span>You&apos;ve reached the end for now. New updates will appear automatically.</span>
+                    <span>You&apos;ve reached the end of the feed.</span>
                   </div>
                   <button
                     type="button"
@@ -478,4 +475,3 @@ function ForYouFeedContent() {
     </AppShell>
   );
 }
-

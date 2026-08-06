@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { FeedCard } from "@/components/FeedCard";
 import { Icon } from "@/components/ui/Icon";
-import { fetchFeed } from "@/lib/api";
+import { fetchFeed, isDemoModeEnabled } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
 import type { FeedItem } from "@/lib/types";
 
@@ -12,22 +12,37 @@ export default function OpportunitiesPage() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<string>("all");
-  const [error, setError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const isDemo = isDemoModeEnabled();
 
   const loadData = async () => {
     setLoading(true);
-    setError(false);
+    setErrorMsg(null);
     try {
       const res = await fetchFeed();
       if (res && res.items && res.items.length > 0) {
         const filtered = res.items.filter((i) => ["job", "scholarship", "learning"].includes(i.category));
         setItems(filtered);
       } else {
-        setItems(sampleFeed.filter((i) => ["job", "scholarship", "learning"].includes(i.category)));
+        if (isDemoModeEnabled()) {
+          const filtered = sampleFeed
+            .filter((i) => ["job", "scholarship", "learning"].includes(i.category))
+            .map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" }));
+          setItems(filtered);
+        } else {
+          setItems([]);
+        }
       }
     } catch {
-      setError(true);
-      setItems(sampleFeed.filter((i) => ["job", "scholarship", "learning"].includes(i.category)));
+      if (isDemoModeEnabled()) {
+        const filtered = sampleFeed
+          .filter((i) => ["job", "scholarship", "learning"].includes(i.category))
+          .map((i) => ({ ...i, verification_status: "demo" as const, data_mode: "demo" }));
+        setItems(filtered);
+      } else {
+        setErrorMsg("We could not load live opportunities.");
+        setItems([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -88,15 +103,26 @@ export default function OpportunitiesPage() {
           ))}
         </div>
 
-        {error && (
+        {isDemo && (
           <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
             <Icon name="alert" size={16} />
-            <span>Connected to verified demo database fallback.</span>
+            <span>Demonstration mode enabled — showing sample listings for testing.</span>
           </div>
         )}
 
-        {/* List */}
-        {loading ? (
+        {errorMsg ? (
+          <div className="p-8 text-center bg-white dark:bg-slate-800 rounded-3xl border border-red-200 dark:border-red-900/30 space-y-3">
+            <div className="text-red-600 dark:text-red-400 font-bold text-base">We could not load live opportunities</div>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">{errorMsg}</p>
+            <button
+              type="button"
+              onClick={loadData}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary-600 text-white shadow hover:bg-primary-700 transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        ) : loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-44 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
@@ -104,8 +130,8 @@ export default function OpportunitiesPage() {
           </div>
         ) : displayedItems.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No opportunities found</h3>
-            <p className="text-xs text-slate-500 mb-4">Try clearing category filters.</p>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">No current opportunities were found</h3>
+            <p className="text-xs text-slate-500 mb-4">Try clearing category filters or check back later for live opportunities.</p>
             <button type="button" onClick={() => setCategory("all")} className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary-600 text-white">
               Show All
             </button>

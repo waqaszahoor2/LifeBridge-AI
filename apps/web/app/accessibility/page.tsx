@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Icon } from "@/components/ui/Icon";
-import { getNearbyServices } from "@/lib/api";
+import { getNearbyServices, isDemoModeEnabled } from "@/lib/api";
 import type { NearbyService } from "@/lib/types";
 
 const CITIES: Record<string, { lat: number; lng: number }> = {
@@ -24,6 +24,7 @@ export default function AccessibilityPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const isDemo = isDemoModeEnabled();
 
   const accessible = useMemo(() => items.filter((item) => item.accessibility === "yes"), [items]);
 
@@ -63,31 +64,35 @@ export default function AccessibilityPage() {
     try {
       setItems(await getNearbyServices(lat, lng, "all"));
     } catch {
-      // Fallback demo data
-      setItems([
-        {
-          external_id: "osm_1",
-          name: "Central Health & Mobility Center",
-          service_type: "clinic",
-          latitude: lat,
-          longitude: lng,
-          distance_km: 0.8,
-          accessibility: "yes",
-          address: "Main Medical Blvd",
-          source_url: "https://openstreetmap.org",
-        },
-        {
-          external_id: "osm_2",
-          name: "Civic Transit Station",
-          service_type: "bus_station",
-          latitude: lat + 0.005,
-          longitude: lng + 0.005,
-          distance_km: 1.2,
-          accessibility: "yes",
-          address: "Station Road Gate 2",
-          source_url: "https://openstreetmap.org",
-        },
-      ]);
+      if (isDemoModeEnabled()) {
+        setItems([
+          {
+            external_id: "osm_demo_1",
+            name: "Demonstration Mobility Center",
+            service_type: "clinic",
+            latitude: lat,
+            longitude: lng,
+            distance_km: 0.8,
+            accessibility: "yes",
+            address: "Demo Main Medical Blvd",
+            source_url: "#",
+          },
+          {
+            external_id: "osm_demo_2",
+            name: "Demonstration Transit Hub",
+            service_type: "bus_station",
+            latitude: lat + 0.005,
+            longitude: lng + 0.005,
+            distance_km: 1.2,
+            accessibility: "yes",
+            address: "Demo Station Road Gate 2",
+            source_url: "#",
+          },
+        ]);
+      } else {
+        setError("We could not load live accessible places.");
+        setItems([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -108,7 +113,7 @@ export default function AccessibilityPage() {
             AccessLink Mobility Search
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Find nearby services with verified wheelchair accessibility metadata supplied by open community records.
+            Find nearby services with verified wheelchair accessibility metadata.
           </p>
         </div>
 
@@ -183,14 +188,27 @@ export default function AccessibilityPage() {
         </form>
 
         {error && (
-          <div className="mb-6 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400">
-            {error}
+          <div className="mb-6 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center space-y-3">
+            <div className="text-red-600 dark:text-red-400 font-bold text-sm">{error}</div>
+            <button
+              type="button"
+              onClick={() => fetchNearby(Number(latitude), Number(longitude))}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary-600 text-white shadow hover:bg-primary-700 transition-all"
+            >
+              Retry Search
+            </button>
           </div>
         )}
 
         {/* Results */}
         {items.length > 0 && (
           <div className="space-y-6">
+            {isDemo && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-600 dark:text-amber-400 font-medium">
+                Demonstration result — live location data is unavailable.
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
               <div>
                 <span className="block text-xs text-slate-500">Total Found</span>
@@ -208,7 +226,7 @@ export default function AccessibilityPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {items.map((item) => (
-                <div key={item.external_id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div key={item.external_id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
                   <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">{item.name}</h3>
                   <p className="text-xs text-slate-500 mb-2">
                     {item.service_type} • {item.distance_km ?? "?"} km away
@@ -217,9 +235,6 @@ export default function AccessibilityPage() {
                     Wheelchair: {item.accessibility}
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">{item.address || "Address details in OpenStreetMap"}</p>
-                  <a href={item.source_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary-600 hover:underline">
-                    View Open Source Record →
-                  </a>
                 </div>
               ))}
             </div>

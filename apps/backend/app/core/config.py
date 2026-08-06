@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     groq_api_key: str = ""
     groq_model: str = "llama-3.1-8b-instant"
+    assistant_demo_mode: bool = False
 
 
     nasa_eonet_enabled: bool = True

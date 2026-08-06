@@ -33,15 +33,16 @@ export function FeedCard({
 }) {
   const [isSaved, setIsSaved] = useState<boolean>(isSavedInitial);
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
-  const [showReminderModal, setShowReminderModal] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isReporting, setIsReporting] = useState<boolean>(false);
+  const [hasReported, setHasReported] = useState<boolean>(false);
 
   const effectiveScore = typeof matchScore === "number" ? matchScore : item.match_score;
   const effectiveReason = item.recommendation_reason || (reasons && reasons.length > 0 ? reasons[0] : null);
 
   function triggerToast(msg: string) {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   }
 
   function handleSaveToggle() {
@@ -75,23 +76,27 @@ export function FeedCard({
   }
 
   async function handleReport() {
-    await reportFeedItem(item.id);
-    triggerToast("Report submitted to Trust & Safety.");
-  }
-
-  function handleHide() {
-    if (onHide) onHide(item);
-    triggerToast("Post hidden");
+    if (isReporting || hasReported) return;
+    setIsReporting(true);
+    try {
+      const res = await reportFeedItem(item.id);
+      if (res && res.status === "success") {
+        setHasReported(true);
+        triggerToast("Report submitted to Trust & Safety.");
+      } else {
+        triggerToast("We could not submit this report. Nothing was sent.");
+      }
+    } catch {
+      triggerToast("We could not submit this report. Nothing was sent.");
+    } finally {
+      setIsReporting(false);
+    }
   }
 
   const cardImage =
     typeof item.image_url === "string" && item.image_url.length > 10
       ? item.image_url
       : defaultCategoryImages[item.category] || defaultCategoryImages.disaster;
-
-  const readTime = item.category === "disaster" ? "2 min read" : "3 min read";
-  const viewsCount = item.category === "disaster" ? "12.4K" : item.category === "scholarship" ? "8.7K" : "5.2K";
-  const commentsCount = item.category === "disaster" ? 128 : item.category === "scholarship" ? 64 : 42;
 
   const tagList = item.tags ? item.tags.split(";").filter(Boolean).slice(0, 4) : [item.category, "LifeBridge"];
 
@@ -106,7 +111,6 @@ export function FeedCard({
             <div className="media-overlay-badge badge-left">
               {item.severity === "critical" ? "Breaking" : item.category.toUpperCase()}
             </div>
-            <div className="media-overlay-badge badge-right">{readTime}</div>
           </div>
 
           {/* Right Content Section */}
@@ -117,7 +121,7 @@ export function FeedCard({
                 <span className="category-name">{item.category.charAt(0).toUpperCase() + item.category.slice(1)} Update</span>
                 {(item.verification_status === "demo" || (item as any).data_mode === "demo") && (
                   <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                    Demo Data — Not a live alert
+                    Demo Data
                   </span>
                 )}
                 <span className="meta-bullet">•</span>
@@ -160,16 +164,23 @@ export function FeedCard({
 
             {/* Bottom Actions Row */}
             <div className="card-footer-metrics">
-              <div className="metrics-group">
-                <span className="metric-badge">
-                  <Icon name="user" size={13} /> {viewsCount} views
-                </span>
-                <span className="metric-badge">
-                  <Icon name="help" size={13} /> {commentsCount}
+              <div className="metrics-group text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <span className="font-medium text-slate-600 dark:text-slate-300">
+                  {item.source_name || "Verified Source"}
                 </span>
               </div>
 
-              <div className="actions-group">
+              <div className="actions-group flex items-center gap-2">
+                <button
+                  type="button"
+                  className="footer-action-btn"
+                  onClick={handleReport}
+                  disabled={isReporting || hasReported}
+                  title="Report Content"
+                >
+                  <Icon name="shield" size={14} />
+                  <span>{hasReported ? "Reported" : isReporting ? "Reporting..." : "Report"}</span>
+                </button>
                 <button type="button" className="footer-action-btn" onClick={handleShare}>
                   <Icon name="share" size={14} /> Share
                 </button>
@@ -197,7 +208,7 @@ export function FeedCard({
               <h3 id="modal-title">{item.title}</h3>
               <button type="button" className="close-btn" onClick={() => setShowDetailModal(false)}>✕</button>
             </header>
-            <div className="modal-body">
+            <div className="modal-body space-y-2 text-xs text-slate-700 dark:text-slate-300">
               <p><strong>Category:</strong> {item.category}</p>
               <p><strong>Source:</strong> {item.source_name} ({item.verification_status})</p>
               <p><strong>Location:</strong> {item.location}</p>
@@ -205,7 +216,7 @@ export function FeedCard({
               {item.eligibility && <p><strong>Eligibility:</strong> {item.eligibility}</p>}
               {item.salary_text && <p><strong>Compensation:</strong> {item.salary_text}</p>}
               {item.funding_type && <p><strong>Funding Type:</strong> {item.funding_type}</p>}
-              <p><strong>Reliability:</strong> {Math.round(item.source_reliability * 100)}%</p>
+              <p><strong>Source Reliability:</strong> {Math.round(item.source_reliability * 100)}%</p>
             </div>
             <footer className="modal-footer">
               <a href={item.source_url} target="_blank" rel="noopener noreferrer" className="btn-primary">
@@ -219,4 +230,3 @@ export function FeedCard({
     </>
   );
 }
-

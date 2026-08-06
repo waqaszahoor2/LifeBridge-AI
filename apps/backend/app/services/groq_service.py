@@ -1,6 +1,7 @@
 import logging
 import uuid
 from typing import Any, AsyncGenerator, Dict, Generator, List, Optional
+from fastapi import HTTPException
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -31,17 +32,14 @@ def format_messages_for_groq(
     if roadmap_context:
         base_prompt += f"\n\nCurrent Roadmap Context: {roadmap_context}"
 
-    formatted_messages = []
-    has_system = any(m.get("role") == "system" for m in messages)
-    if not has_system:
-        formatted_messages.append({"role": "system", "content": base_prompt})
+    # Server system prompt is ALWAYS prepended first (Item 9 Requirement)
+    formatted_messages = [{"role": "system", "content": base_prompt}]
 
-    # Clean history before sending to provider (Item 12 requirement)
+    # Discard any client-supplied "system" messages, accepting ONLY "user" and "assistant" roles
     for msg in messages:
         role = msg.get("role", "user")
         content = msg.get("content", "")
-        # Exclude system welcome messages, empty placeholders, or failed messages
-        if role in ["system", "user", "assistant"] and content and not content.startswith("[Local Demo Mode]") and not content.startswith("The live AI assistant is temporarily unavailable"):
+        if role in ["user", "assistant"] and content and not content.startswith("[Local Demo Mode]") and not content.startswith("The live AI assistant is temporarily unavailable"):
             formatted_messages.append({"role": role, "content": content})
 
     return formatted_messages
@@ -63,71 +61,26 @@ def call_groq_chat(
     formatted_messages = format_messages_for_groq(messages, mode, roadmap_context)
     is_groq_configured = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
 
-    if is_groq_configured:
-        try:
-            from groq import Groq
-
-            client = Groq(api_key=api_key)
-            completion = client.chat.completions.create(
-                model=model,
-                messages=formatted_messages,
-                temperature=min(max(temperature, 0.0), 1.0),
-                max_tokens=max_tokens,
-            )
-            reply = completion.choices[0].message.content or ""
-            return {
-                "message": {"role": "assistant", "content": reply},
-                "reply": reply,
-                "model": model,
-                "model_used": model,
-                "conversation_id": conversation_id,
-                "provider": "groq",
-                "citations": [],
-                "disclaimer": "AI guidance is for informational purposes. Verify important decisions independently.",
-                "status": "success",
-            }
-        except Exception as err:
-            logger.error(f"Groq API provider execution error: {type(err).__name__}")
-            raise Exception("Groq API request failed. Check server configuration or network connectivity.")
-
-    # Local Demo Mode fallback (when GROQ_API_KEY is not configured)
-    last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-    fallback_reply = generate_generic_demo_response(last_user_msg)
-    return {
-        "message": {"role": "assistant", "content": fallback_reply},
-        "reply": fallback_reply,
-        "model": "local_demo_engine",
-        "model_used": "local_demo_engine",
-        "conversation_id": conversation_id,
-        "provider": "local_demo",
-        "citations": [],
-        "disclaimer": "Local Demo Mode: GROQ_API_KEY is not configured on the backend server.",
-        "status": "fallback",
-    }
-
-
-def stream_groq_chat(
-    messages: List[Dict[str, str]],
-    mode: str = "lifebridge_assistant",
-    temperature: float = 0.7,
-    max_tokens: int = 1024,
-    roadmap_context: Optional[str] = None,
-) -> Generator[Dict[str, Any], None, None]:
-    """Generates real-time Groq tokens directly."""
-    settings = get_settings()
-    api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
-    model = settings.groq_model or "llama-3.1-8b-instant"
-
-    formatted_messages = format_messages_for_groq(messages, mode, roadmap_context)
-    is_groq_configured = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
-
     if not is_groq_configured:
-        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine"}
+        if not settings.assistant_demo_mode:
+            raise HTTPException(
+                status_code=530 if False else 503,
+                detail="Groq API key is not configured and ASSISTANT_DEMO_MODE is false.",
+            )
+        # Local Demo Mode fallback (only when ASSISTANT_DEMO_MODE is True)
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-        demo_reply = generate_generic_demo_response(last_user_msg)
-        yield {"type": "token", "content": demo_reply}
-        yield {"type": "done"}
-        return
+        fallback_reply = generate_generic_demo_response(last_user_msg)
+        return {
+            "message": {"role": "assistant", "content": fallback_reply},
+            "reply": fallback_reply,
+            "model": "local_demo_engine",
+            "model_used": "local_demo_engine",
+            "conversation_id": conversation_id,
+            "provider": "local_demo",
+            "citations": [],
+            "disclaimer": "Local Demo Mode: GROQ_API_KEY is not configured on the backend server.",
+            "status": "fallback",
+        }
 
     try:
         from groq import Groq
@@ -138,23 +91,39 @@ def stream_groq_chat(
             messages=formatted_messages,
             temperature=min(max(temperature, 0.0), 1.0),
             max_tokens=max_tokens,
-            stream=True,
         )
-
-        yield {"type": "meta", "provider": "groq", "status": "success", "model": model}
-
-        for chunk in completion:
-            if chunk.choices and len(chunk.choices) > 0:
-                delta = chunk.choices[0].delta
-                token = delta.content if delta and hasattr(delta, "content") else None
-                if token:
-                    yield {"type": "token", "content": token}
-
-        yield {"type": "done"}
-
+        reply = completion.choices[0].message.content or ""
+        return {
+            "message": {"role": "assistant", "content": reply},
+            "reply": reply,
+            "model": model,
+            "model_used": model,
+            "conversation_id": conversation_id,
+            "provider": "groq",
+            "citations": [],
+            "disclaimer": "AI guidance is for informational purposes. Verify important decisions independently.",
+            "status": "success",
+        }
     except Exception as err:
-        logger.error(f"Groq streaming error: {type(err).__name__}")
-        yield {"type": "error", "message": "The live Groq AI assistant stream encountered an error."}
+        logger.error(f"Groq API provider execution error: {type(err).__name__}")
+        if not settings.assistant_demo_mode:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Groq provider request failed: {type(err).__name__}",
+            )
+        last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
+        fallback_reply = generate_generic_demo_response(last_user_msg)
+        return {
+            "message": {"role": "assistant", "content": fallback_reply},
+            "reply": fallback_reply,
+            "model": "local_demo_engine",
+            "model_used": "local_demo_engine",
+            "conversation_id": conversation_id,
+            "provider": "local_demo",
+            "citations": [],
+            "disclaimer": "Local Demo Mode: Groq provider failed.",
+            "status": "fallback",
+        }
 
 
 async def stream_groq_chat_async(
@@ -175,6 +144,13 @@ async def stream_groq_chat_async(
     is_groq_configured = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
 
     if not is_groq_configured:
+        if not settings.assistant_demo_mode:
+            yield {
+                "type": "error",
+                "message": "Groq API key is not configured and ASSISTANT_DEMO_MODE is false.",
+                "request_id": req_id,
+            }
+            return
         yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine"}
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
         demo_reply = generate_generic_demo_response(last_user_msg)
@@ -210,11 +186,18 @@ async def stream_groq_chat_async(
 
     except Exception as err:
         logger.error(f"[Req {req_id}] Groq async streaming error: {type(err).__name__}")
-        yield {
-            "type": "error",
-            "message": "The live Groq AI assistant stream encountered an error.",
-            "request_id": req_id,
-        }
+        if not settings.assistant_demo_mode:
+            yield {
+                "type": "error",
+                "message": f"The live Groq AI assistant stream encountered an error: {type(err).__name__}",
+                "request_id": req_id,
+            }
+            return
+        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine"}
+        last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
+        demo_reply = generate_generic_demo_response(last_user_msg)
+        yield {"type": "token", "content": demo_reply}
+        yield {"type": "done"}
 
 
 def generate_generic_demo_response(user_query: str) -> str:

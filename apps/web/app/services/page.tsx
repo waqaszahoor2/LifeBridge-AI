@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Icon } from "@/components/ui/Icon";
-import { getNearbyServices } from "@/lib/api";
+import { getNearbyServices, isDemoModeEnabled } from "@/lib/api";
 import type { NearbyService } from "@/lib/types";
 
 const CITIES: Record<string, { lat: number; lng: number }> = {
@@ -25,6 +25,7 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const isDemo = isDemoModeEnabled();
 
   function handleCityChange(newCity: string) {
     setCity(newCity);
@@ -62,31 +63,35 @@ export default function ServicesPage() {
     try {
       setItems(await getNearbyServices(latitude, longitude, serviceType));
     } catch {
-      // Fallback demo data
-      setItems([
-        {
-          external_id: "srv_1",
-          name: "Mayo Hospital Emergency Ward",
-          service_type: "hospital",
-          latitude: latitude,
-          longitude: longitude,
-          distance_km: 1.1,
-          accessibility: "yes",
-          address: "Hospital Road, Civil Lines",
-          source_url: "https://openstreetmap.org",
-        },
-        {
-          external_id: "srv_2",
-          name: "Red Crescent Community Clinic",
-          service_type: "clinic",
-          latitude: latitude + 0.008,
-          longitude: longitude + 0.008,
-          distance_km: 2.3,
-          accessibility: "yes",
-          address: "Block B Community Complex",
-          source_url: "https://openstreetmap.org",
-        },
-      ]);
+      if (isDemoModeEnabled()) {
+        setItems([
+          {
+            external_id: "srv_demo_1",
+            name: "Demonstration Hospital",
+            service_type: "hospital",
+            latitude: latitude,
+            longitude: longitude,
+            distance_km: 1.1,
+            accessibility: "yes",
+            address: "Demo Location Ward, Block A",
+            source_url: "#",
+          },
+          {
+            external_id: "srv_demo_2",
+            name: "Demonstration Community Clinic",
+            service_type: "clinic",
+            latitude: latitude + 0.008,
+            longitude: longitude + 0.008,
+            distance_km: 2.3,
+            accessibility: "yes",
+            address: "Demo Community Complex",
+            source_url: "#",
+          },
+        ]);
+      } else {
+        setError("We could not load live nearby services.");
+        setItems([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -98,16 +103,16 @@ export default function ServicesPage() {
   }
 
   return (
-    <AppShell pageTitle="ServiceLink Finder" pageSubtitle="Find nearby essential healthcare, emergency shelters, and community facilities.">
+    <AppShell pageTitle="Essential Services" pageSubtitle="Find verified emergency wards, community health clinics, and essential care facilities.">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Intro */}
         <div className="mb-6 p-6 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
           <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2 mb-2">
             <Icon name="services" size={24} className="text-primary-500" />
-            ServiceLink Essential Services
+            Essential Service Finder
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Search nearby hospitals, clinics, emergency shelters, and civic support facilities.
+            Search nearby hospitals, emergency clinics, and community support centers with clear location data.
           </p>
         </div>
 
@@ -139,83 +144,61 @@ export default function ServicesPage() {
               </select>
             </div>
 
-            <div className="min-w-[150px]">
+            <div className="w-40">
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
                 className="w-full bg-slate-100 dark:bg-slate-900 text-xs font-medium text-slate-900 dark:text-white px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none"
               >
-                <option value="all">All Facility Types</option>
+                <option value="all">All Service Types</option>
                 <option value="hospital">Hospitals</option>
                 <option value="clinic">Clinics</option>
-                <option value="shelter">Emergency Shelters</option>
-                <option value="training">Training Centers</option>
+                <option value="pharmacy">Pharmacies</option>
               </select>
             </div>
 
             <button type="submit" disabled={loading} className="px-5 py-2 text-xs font-bold rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 transition-all">
-              {loading ? "Searching…" : "Find Services"}
+              {loading ? "Searching…" : "Search Services"}
             </button>
-          </div>
-
-          {/* Advanced Coordinates Toggle */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-700/60">
-            <button
-              type="button"
-              onClick={() => setShowAdvanced((prev) => !prev)}
-              className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
-            >
-              {showAdvanced ? "▼ Hide Advanced Coordinates" : "▶ Advanced: Custom Latitude & Longitude"}
-            </button>
-
-            {showAdvanced && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                <label className="text-xs text-slate-600 dark:text-slate-400">
-                  Latitude
-                  <input
-                    type="number"
-                    step="any"
-                    value={lat}
-                    onChange={(e) => setLat(e.target.value)}
-                    className="w-full mt-1 bg-slate-100 dark:bg-slate-900 text-xs text-slate-900 dark:text-white p-2 rounded-lg border border-slate-200 dark:border-slate-700"
-                  />
-                </label>
-                <label className="text-xs text-slate-600 dark:text-slate-400">
-                  Longitude
-                  <input
-                    type="number"
-                    step="any"
-                    value={lon}
-                    onChange={(e) => setLon(e.target.value)}
-                    className="w-full mt-1 bg-slate-100 dark:bg-slate-900 text-xs text-slate-900 dark:text-white p-2 rounded-lg border border-slate-200 dark:border-slate-700"
-                  />
-                </label>
-              </div>
-            )}
           </div>
         </form>
 
         {error && (
-          <div className="mb-6 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400">
-            {error}
+          <div className="mb-6 p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center space-y-3">
+            <div className="text-red-600 dark:text-red-400 font-bold text-sm">{error}</div>
+            <button
+              type="button"
+              onClick={() => fetchNearby(Number(lat), Number(lon), type)}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-primary-600 text-white shadow hover:bg-primary-700 transition-all"
+            >
+              Retry Search
+            </button>
           </div>
         )}
 
-        {/* Results Grid */}
+        {/* Results */}
         {items.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {items.map((item) => (
-              <div key={item.external_id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">{item.name}</h3>
-                <p className="text-xs text-slate-500 mb-2">
-                  {item.service_type} • {item.distance_km ?? "?"} km away
-                </p>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">{item.address || "Address available via map link"}</p>
-                <a href={item.source_url} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary-600 hover:underline">
-                  Open Source Map →
-                </a>
+          <div className="space-y-4">
+            {isDemo && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-600 dark:text-amber-400 font-medium">
+                Demonstration result — live location data is unavailable.
               </div>
-            ))}
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {items.map((item) => (
+                <div key={item.external_id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{item.name}</h3>
+                    <span className="px-2 py-0.5 text-[10px] uppercase font-bold rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                      {item.service_type}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">Distance: {item.distance_km ?? "?"} km</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">{item.address || "Address details unavailable"}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

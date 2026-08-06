@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 
-const BUILD_TIMESTAMP = process.env.APP_BUILD_TIMESTAMP || new Date().toISOString();
-
 export async function GET() {
   const commit =
     process.env.VERCEL_GIT_COMMIT_SHA ||
@@ -15,6 +13,7 @@ export async function GET() {
     "main";
 
   const version = process.env.APP_VERSION || "1.0.0";
+  const builtAt = process.env.APP_BUILD_TIMESTAMP || "NOT_CONFIGURED_BUILD_TIMESTAMP";
 
   return NextResponse.json(
     {
@@ -22,7 +21,7 @@ export async function GET() {
       commit,
       branch,
       environment: process.env.NODE_ENV || "production",
-      built_at: BUILD_TIMESTAMP,
+      built_at: builtAt,
     },
     {
       headers: {
