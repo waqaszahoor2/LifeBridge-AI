@@ -180,7 +180,7 @@ export interface RoadmapResponse {
   estimated_hours: number;
   completion_percentage: number;
   current_phase_number: number;
-  mode_used: "ai_generated" | "structured_template";
+  mode_used: "ai_generated" | "structured_template" | "local_demo";
   personalization_reason: string;
   phases: RoadmapPhase[];
   tools: ToolRecommendation[];

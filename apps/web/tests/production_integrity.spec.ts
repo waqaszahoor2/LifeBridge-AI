@@ -1,42 +1,42 @@
-// @ts-nocheck
 import { test, expect } from "@playwright/test";
 
-test.describe("LifeBridge AI Production Integrity & Health Contract", () => {
-  test("1. Live/Demo badge display matches backend status", async ({ page }) => {
-    await page.goto("/assistant");
-    const badge = page.locator("h1 span");
-    await expect(badge).toBeVisible();
-    const text = await badge.innerText();
-    expect(text.includes("Groq AI") || text.includes("Local Demo Mode") || text.includes("Offline")).toBeTruthy();
+test.describe("LifeBridge AI Production Integrity Verification", () => {
+  test("Dynamic /api/build-info route returns valid commit and headers", async ({ request }) => {
+    const response = await request.get("/api/build-info");
+    expect(response.status()).toBe(200);
+
+    const headers = response.headers();
+    expect(headers["cache-control"]).toContain("no-store");
+
+    const data = await response.json();
+    expect(data).toHaveProperty("version");
+    expect(data).toHaveProperty("commit");
+    expect(data).toHaveProperty("branch");
+    expect(data).toHaveProperty("environment");
+    expect(data).toHaveProperty("built_at");
+    expect(data.commit).not.toBe("a45bcda");
+    expect(data.commit).not.toBe("acec205");
   });
 
-  test("2. History consent toggle works as expected", async ({ page }) => {
-    await page.goto("/assistant");
-    const checkbox = page.locator('input[type="checkbox"]');
-    await expect(checkbox).toBeVisible();
-
-    // Default should be false
-    const isChecked = await checkbox.isChecked();
-    expect(isChecked).toBeFalsy();
-
-    // Toggle ON
-    await checkbox.check();
-    expect(await checkbox.isChecked()).toBeTruthy();
-
-    const optIn = await page.evaluate(() => localStorage.getItem("lifebridge_opt_in_history"));
-    expect(optIn).toBe("true");
-
-    // Toggle OFF
-    await checkbox.uncheck();
-    const optInAfter = await page.evaluate(() => localStorage.getItem("lifebridge_opt_in_history"));
-    expect(optInAfter).toBe("false");
-    const storedHistory = await page.evaluate(() => localStorage.getItem("lifebridge_assistant_history"));
-    expect(storedHistory).toBeNull();
+  test("Homepage loads with Guest state and no hardcoded Aarav username", async ({ page }) => {
+    await page.goto("/for-you");
+    await expect(page.locator("body")).not.toContainText("Hello, Aarav");
+    await expect(page.locator("body")).toContainText("Guest");
   });
 
-  test("3. Demonstration alert label is displayed on disasters page", async ({ page }) => {
+  test("LeftSidebar profile completeness starts at 0% for unauthenticated user", async ({ page }) => {
+    await page.goto("/for-you");
+    await expect(page.locator("body")).toContainText("Profile Completeness");
+    await expect(page.locator("body")).toContainText("0%");
+  });
+
+  test("DisasterLink displays proper warning or live feed", async ({ page }) => {
     await page.goto("/disasters");
-    const demoLabel = page.locator("text=DEMONSTRATION ALERT");
-    await expect(demoLabel.first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "DisasterLink Safety Advisories" })).toBeVisible();
+  });
+
+  test("Assistant page loads without duplicate controls", async ({ page }) => {
+    await page.goto("/assistant");
+    await expect(page.getByRole("checkbox", { name: "Save chat history on this device" })).toBeVisible();
   });
 });

@@ -8,27 +8,53 @@ export function LeftSidebar() {
   const [profile, setProfile] = useState({
     name: "Guest User",
     title: "Local Demo Profile — not a secure account",
-    country: "Demonstration Mode",
-    studyLevel: "General Access",
-    field: "Platform Skills",
+    country: "Not set",
+    studyLevel: "Not set",
+    field: "Not set",
   });
   const [savedCount, setSavedCount] = useState<number>(0);
-  const [completeness, setCompleteness] = useState<number>(25);
+  const [completeness, setCompleteness] = useState<number>(0);
+  const [buildCommit, setBuildCommit] = useState<string>("");
 
   useEffect(() => {
+    // Fetch build info dynamically
+    fetch("/api/build-info")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.commit) {
+          setBuildCommit(data.commit !== "development" ? data.commit.slice(0, 7) : "dev");
+        }
+      })
+      .catch(() => {});
+
+    // Check stored profile
     const savedProf = getStoredProfile();
     if (savedProf) {
-      const filledFields = [savedProf.country, savedProf.study_level, savedProf.field_of_study, savedProf.skills?.length].filter(Boolean).length;
-      const calc = Math.min(100, Math.round((filledFields / 4) * 100));
-      setCompleteness(calc > 0 ? calc : 25);
+      const checkedFields = [
+        savedProf.name,
+        savedProf.country,
+        savedProf.study_level,
+        savedProf.field_of_study,
+        savedProf.skills && savedProf.skills.length > 0 ? true : null,
+        savedProf.target_goal,
+        savedProf.opportunity_type,
+        savedProf.notification_pref,
+      ];
+      const filled = checkedFields.filter(Boolean).length;
+      const calc = Math.min(100, Math.round((filled / 8) * 100));
+      setCompleteness(calc);
 
       setProfile((prev) => ({
         ...prev,
+        name: savedProf.name || prev.name,
         country: savedProf.country || prev.country,
         studyLevel: savedProf.study_level || prev.studyLevel,
         field: savedProf.field_of_study || prev.field,
       }));
+    } else {
+      setCompleteness(0);
     }
+
     const storedSaved = localStorage.getItem("lifebridge_saved_items");
     if (storedSaved) {
       try {
@@ -49,7 +75,7 @@ export function LeftSidebar() {
         <div className="profile-banner-bg" />
         <div className="profile-avatar-wrap">
           <div className="profile-avatar-placeholder" aria-hidden="true">
-            {profile.name ? profile.name.slice(0, 2).toUpperCase() : "GU"}
+            {profile.name && profile.name !== "Guest User" ? profile.name.slice(0, 2).toUpperCase() : "GU"}
           </div>
         </div>
         <div className="profile-info-block">
@@ -111,7 +137,7 @@ export function LeftSidebar() {
           </li>
         </ul>
         <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[10px] text-slate-400 text-center">
-          LifeBridge AI v1.0.0 (Build: <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">a45bcda</code>)
+          LifeBridge AI v1.0.0 {buildCommit && <>(Build: <code className="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">{buildCommit}</code>)</>}
         </div>
       </div>
     </aside>

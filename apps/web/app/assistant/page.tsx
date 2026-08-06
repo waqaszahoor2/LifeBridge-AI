@@ -174,8 +174,7 @@ export default function AssistantPage() {
     setErrorMsg(null);
   }
 
-  async function handleSend(promptText?: string) {
-    const textToSend = (promptText || input).trim();
+  async function executeSend(textToSend: string, baseMessages: MessageUI[]) {
     if (!textToSend || loading) return;
 
     if (textToSend.length > 10000) {
@@ -186,26 +185,38 @@ export default function AssistantPage() {
     setInput("");
     setErrorMsg(null);
 
-    // Create new AbortController
     const controller = new AbortController();
     activeAbortController.current = controller;
 
-    const userMsgId = `user_${Date.now()}`;
-    const userMsg: MessageUI = {
-      id: userMsgId,
-      sender: "user",
-      text: textToSend,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
+    // Check if the user turn is already the latest message in baseMessages
+    const lastMsg = baseMessages[baseMessages.length - 1];
+    let currentMessages = baseMessages;
+    if (!lastMsg || lastMsg.sender !== "user" || lastMsg.text !== textToSend) {
+      const userMsg: MessageUI = {
+        id: `user_${Date.now()}`,
+        sender: "user",
+        text: textToSend,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      currentMessages = [...baseMessages, userMsg];
+    }
 
-    const updatedUI = [...messages, userMsg];
-    setMessages(updatedUI);
+    setMessages(currentMessages);
     setLoading(true);
 
-    const apiMessages: ChatMessage[] = updatedUI.map((m) => ({
-      role: m.sender === "user" ? "user" : "assistant",
-      content: m.text,
-    }));
+    const apiMessages: ChatMessage[] = currentMessages
+      .filter(
+        (m) =>
+          m.text.trim() &&
+          m.provider !== "system" &&
+          m.provider !== "pending" &&
+          m.provider !== "failed" &&
+          m.status !== "error"
+      )
+      .map((m) => ({
+        role: m.sender === "user" ? "user" : "assistant",
+        content: m.text,
+      }));
 
     const assistantMsgId = `asst_${Date.now()}`;
     setMessages((prev) => [
@@ -215,8 +226,8 @@ export default function AssistantPage() {
         sender: "assistant",
         text: "",
         isStreaming: true,
-        provider: healthStatus.isReady ? "groq" : "local_demo",
-        status: "success",
+        provider: "pending",
+        status: "streaming",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
@@ -286,6 +297,12 @@ export default function AssistantPage() {
     }
   }
 
+  async function handleSend(promptText?: string) {
+    const textToSend = (promptText || input).trim();
+    if (!textToSend || loading) return;
+    await executeSend(textToSend, messages);
+  }
+
   function handleStopGenerating() {
     if (activeAbortController.current) {
       activeAbortController.current.abort();
@@ -295,9 +312,28 @@ export default function AssistantPage() {
   }
 
   function handleRetry() {
-    const lastUserMsg = [...messages].reverse().find((m) => m.sender === "user");
-    if (lastUserMsg) {
-      handleSend(lastUserMsg.text);
+    if (loading) return;
+    const last = messages[messages.length - 1];
+    let cleaned = messages;
+    if (last && last.sender === "assistant" && (last.status === "error" || last.provider === "failed")) {
+      cleaned = messages.slice(0, -1);
+    }
+    const lastUser = [...cleaned].reverse().find((m) => m.sender === "user");
+    if (lastUser) {
+      executeSend(lastUser.text, cleaned);
+    }
+  }
+
+  function handleRegenerate() {
+    if (loading) return;
+    let cleaned = messages;
+    const last = messages[messages.length - 1];
+    if (last && last.sender === "assistant") {
+      cleaned = messages.slice(0, -1);
+    }
+    const lastUser = [...cleaned].reverse().find((m) => m.sender === "user");
+    if (lastUser) {
+      executeSend(lastUser.text, cleaned);
     }
   }
 

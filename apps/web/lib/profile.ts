@@ -1,4 +1,5 @@
 export interface LocalRecommendationProfile {
+  name?: string;
   country: string;
   city: string;
   study_level: string;
@@ -6,6 +7,9 @@ export interface LocalRecommendationProfile {
   skills: string[];
   interests: string[];
   preferred_categories: string[];
+  target_goal?: string;
+  opportunity_type?: string;
+  notification_pref?: string;
 }
 
 export const defaultProfile: LocalRecommendationProfile = {

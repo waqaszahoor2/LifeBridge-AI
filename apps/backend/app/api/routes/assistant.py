@@ -2,7 +2,6 @@ import json
 import logging
 import time
 import uuid
-from collections import defaultdict
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import StreamingResponse
@@ -10,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.core.rate_limit import check_rate_limit
 from app.models import SkillRoadmap
 from app.schemas import AssistantChatRequest, AssistantChatResponse, ChatMessage
 from app.services.groq_service import call_groq_chat, stream_groq_chat_async
@@ -17,35 +17,12 @@ from app.services.groq_service import call_groq_chat, stream_groq_chat_async
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
-# Sliding window rate limiter
-RATE_LIMIT_WINDOW_SECONDS = 60
-RATE_LIMIT_MAX_REQUESTS = 30
-request_history: Dict[str, List[float]] = defaultdict(list)
-
 # Provider verification cache
 LAST_VERIFIED_CACHE: Dict[str, Any] = {
     "timestamp": 0,
     "verified": False,
+    "status": "configuration_missing",
 }
-
-
-def get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
-
-
-def check_rate_limit(client_ip: str):
-    now = time.time()
-    timestamps = request_history[client_ip]
-    request_history[client_ip] = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW_SECONDS]
-    if len(request_history[client_ip]) >= RATE_LIMIT_MAX_REQUESTS:
-        raise HTTPException(
-            status_code=429,
-            detail="The assistant has reached its usage rate limit. Please wait 60 seconds and try again.",
-        )
-    request_history[client_ip].append(now)
 
 
 @router.get("/health")
@@ -55,6 +32,7 @@ def assistant_health():
     api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
     model = settings.groq_model or "llama-3.1-8b-instant"
     has_key = bool(api_key and api_key != "PASTE_KEY_HERE" and not api_key.startswith("your_"))
+    req_id = f"req_{uuid.uuid4().hex[:8]}"
 
     now = time.time()
     if has_key and (now - LAST_VERIFIED_CACHE["timestamp"] > 120):
@@ -64,13 +42,22 @@ def assistant_health():
             client = Groq(api_key=api_key)
             models_page = client.models.list()
             available_models = [m.id for m in getattr(models_page, "data", [])] if hasattr(models_page, "data") else []
-            model_exists = model in available_models if available_models else True
 
-            LAST_VERIFIED_CACHE["verified"] = model_exists
+            if not available_models:
+                LAST_VERIFIED_CACHE["verified"] = False
+                LAST_VERIFIED_CACHE["status"] = "verification_unknown"
+            elif model in available_models:
+                LAST_VERIFIED_CACHE["verified"] = True
+                LAST_VERIFIED_CACHE["status"] = "ready"
+            else:
+                LAST_VERIFIED_CACHE["verified"] = False
+                LAST_VERIFIED_CACHE["status"] = "verification_failed"
+
             LAST_VERIFIED_CACHE["timestamp"] = now
         except Exception as err:
             logger.warning(f"Groq health check verification failed: {type(err).__name__}")
             LAST_VERIFIED_CACHE["verified"] = False
+            LAST_VERIFIED_CACHE["status"] = "verification_failed"
             LAST_VERIFIED_CACHE["timestamp"] = now
 
     last_verified = (
@@ -79,22 +66,29 @@ def assistant_health():
         else None
     )
 
-    is_ready = has_key and LAST_VERIFIED_CACHE.get("verified", False)
+    if not has_key:
+        current_status = "configuration_missing"
+        is_ready = False
+    else:
+        current_status = LAST_VERIFIED_CACHE.get("status", "verification_unknown")
+        is_ready = current_status == "ready"
 
     return {
-        "status": "ready" if is_ready else "demo",
+        "status": "ready" if is_ready else current_status,
         "provider": "groq" if is_ready else "local_demo",
         "configured": has_key,
-        "provider_verified": LAST_VERIFIED_CACHE.get("verified", False) if has_key else False,
+        "provider_verified": is_ready,
         "model": model,
+        "request_id": req_id,
+        "verified_at": last_verified,
+        "verification_ttl_seconds": 120,
         "last_verified_at": last_verified,
     }
 
 
 @router.post("/chat", response_model=AssistantChatResponse)
 def assistant_chat(payload: AssistantChatRequest, request: Request, db: Session = Depends(get_db)):
-    client_ip = get_client_ip(request)
-    check_rate_limit(client_ip)
+    check_rate_limit(request, limit_type="chat")
 
     roadmap_context = None
     if payload.roadmap_id:
@@ -147,8 +141,7 @@ def assistant_chat(payload: AssistantChatRequest, request: Request, db: Session 
 @router.post("/chat/stream")
 async def assistant_chat_stream(payload: AssistantChatRequest, request: Request, db: Session = Depends(get_db)):
     """Streaming response endpoint delivering real-time non-blocking SSE tokens directly from Groq."""
-    client_ip = get_client_ip(request)
-    check_rate_limit(client_ip)
+    check_rate_limit(request, limit_type="stream")
 
     roadmap_context = None
     if payload.roadmap_id:

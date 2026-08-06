@@ -376,8 +376,9 @@ function ForYouFeedContent() {
           onSort={setSortMode}
         />
 
-        {/* 2-Column Main Feed Content (Central Feed + Right Sidebar) */}
+        {/* 3-Column Main Feed Content (Left Sidebar + Central Feed + Right Sidebar) */}
         <div className="lb-feed-main-grid">
+          <LeftSidebar />
           {/* Central Feed Column */}
           <section className="lb-center-feed-column" aria-label="Main Feed">
             {/* New Updates Sticky Banner */}

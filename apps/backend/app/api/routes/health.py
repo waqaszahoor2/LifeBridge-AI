@@ -1,6 +1,7 @@
+import os
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,16 @@ from app.core.database import get_db
 
 router = APIRouter(tags=["health"])
 settings = get_settings()
+
+BUILD_TIMESTAMP = os.getenv("APP_BUILD_TIMESTAMP") or datetime.now(UTC).isoformat()
+BUILD_COMMIT = (
+    os.getenv("GIT_COMMIT_SHA")
+    or os.getenv("RENDER_GIT_COMMIT")
+    or os.getenv("VERCEL_GIT_COMMIT_SHA")
+    or "development"
+)
+BUILD_BRANCH = os.getenv("GIT_COMMIT_REF") or "main"
+APP_VERSION = os.getenv("APP_VERSION", "1.1.0")
 
 
 @router.get("/health")
@@ -31,10 +42,12 @@ def readiness(db: Session = Depends(get_db)):
 
 
 @router.get("/build-info")
-def build_info():
+def build_info(response: Response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, proxy-revalidate"
     return {
-        "version": "1.1.0",
-        "commit": "a45bcda",
+        "version": APP_VERSION,
+        "commit": BUILD_COMMIT,
+        "branch": BUILD_BRANCH,
         "environment": settings.app_env,
-        "built_at": datetime.now(UTC).isoformat(),
+        "built_at": BUILD_TIMESTAMP,
     }

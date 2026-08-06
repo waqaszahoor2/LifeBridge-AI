@@ -4,18 +4,20 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { FeedCard } from "@/components/FeedCard";
 import { Icon } from "@/components/ui/Icon";
-import { fetchFeed } from "@/lib/api";
+import { fetchFeed, isDemoModeEnabled } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
 import type { FeedItem } from "@/lib/types";
 
 export default function DisastersPage() {
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isDemoData, setIsDemoData] = useState(false);
   const [severityFilter, setSeverityFilter] = useState<string>("all");
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetchFeed();
       if (res && res.items && res.items.length > 0) {
@@ -23,12 +25,20 @@ export default function DisastersPage() {
         setItems(filtered);
         setIsDemoData(!res.live);
       } else {
-        setItems(sampleFeed.filter((i) => ["disaster", "weather", "safety"].includes(i.category)));
-        setIsDemoData(true);
+        if (isDemoModeEnabled()) {
+          setItems(sampleFeed.filter((i) => ["disaster", "weather", "safety"].includes(i.category)).map((i) => ({ ...i, verification_status: "demo", data_mode: "demo" })));
+          setIsDemoData(true);
+        } else {
+          setError("No live safety advisory data is currently available from the production endpoint.");
+        }
       }
-    } catch {
-      setItems(sampleFeed.filter((i) => ["disaster", "weather", "safety"].includes(i.category)));
-      setIsDemoData(true);
+    } catch (err) {
+      if (isDemoModeEnabled()) {
+        setItems(sampleFeed.filter((i) => ["disaster", "weather", "safety"].includes(i.category)).map((i) => ({ ...i, verification_status: "demo", data_mode: "demo" })));
+        setIsDemoData(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to load live disaster safety advisories.");
+      }
     } finally {
       setLoading(false);
     }
@@ -97,12 +107,27 @@ export default function DisastersPage() {
           ))}
         </div>
 
-        {/* Card Stream */}
+        {/* Card Stream or Error State */}
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-44 rounded-2xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
             ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 px-4 bg-white dark:bg-slate-800 rounded-3xl border border-rose-200 dark:border-rose-900/40">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center mb-3">
+              <Icon name="alert" size={24} />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">Live Safety Advisories Unavailable</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={loadData}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white transition-all shadow-sm"
+            >
+              Retry Connection
+            </button>
           </div>
         ) : displayed.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
