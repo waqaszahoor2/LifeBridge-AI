@@ -215,7 +215,7 @@ test.describe("Accessibility — Skip Links and ARIA", () => {
     // Check aria-live attribute is present during streaming state
     const statusElem = page.locator('[role="status"], [aria-live="polite"]').first();
     // May not render until streaming starts; check for availability
-    await expect(statusElem).toExist().catch(() => {
+    await expect(statusElem).toBeAttached().catch(() => {
       // This is acceptable if the stream resolved too fast
     });
   });

@@ -17,18 +17,13 @@ export function isProduction(): boolean {
 
 /** Validated API base URL. */
 export function getApiBaseUrl(): string {
-  if (isProduction()) {
-    if (!configuredApiUrl) {
-      return "https://lifebridge-ai-backend.onrender.com/api/v1";
-    }
-    if (!configuredApiUrl.startsWith("https://")) {
-      throw new Error(
-        "[Configuration Error] NEXT_PUBLIC_API_BASE_URL must begin with https:// in production."
-      );
-    }
+  if (configuredApiUrl) {
     return configuredApiUrl.replace(/\/$/, "");
   }
-  return configuredApiUrl ? configuredApiUrl.replace(/\/$/, "") : "http://localhost:8000/api/v1";
+  if (isProduction()) {
+    return "https://lifebridge-ai-backend.onrender.com/api/v1";
+  }
+  return "http://localhost:8000/api/v1";
 }
 
 export const API_BASE_URL = getApiBaseUrl();

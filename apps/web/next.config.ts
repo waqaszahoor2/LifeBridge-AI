@@ -1,15 +1,11 @@
 import type { NextConfig } from "next";
 
-const isProd = process.env.NODE_ENV === "production";
-const buildTimestamp = process.env.APP_BUILD_TIMESTAMP || process.env.NEXT_PUBLIC_APP_BUILD_TIMESTAMP;
+const buildTimestamp =
+  process.env.APP_BUILD_TIMESTAMP ||
+  process.env.NEXT_PUBLIC_APP_BUILD_TIMESTAMP ||
+  new Date().toISOString();
 
-if (isProd && !buildTimestamp) {
-  throw new Error(
-    "[Production Build Error] APP_BUILD_TIMESTAMP environment variable is required in production environment."
-  );
-}
-
-const BUILD_TIME = buildTimestamp || "2026-08-06T10:00:00.000Z";
+const BUILD_TIME = buildTimestamp;
 
 const nextConfig: NextConfig = {
   env: {

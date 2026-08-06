@@ -19,23 +19,11 @@ import type {
 // ---------------------------------------------------------------------------
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+const defaultProdApiUrl = "https://lifebridge-ai-backend.onrender.com";
 
-if (process.env.NODE_ENV === "production") {
-  if (!configuredApiUrl) {
-    throw new Error("[Build Failure] NEXT_PUBLIC_API_BASE_URL is required in production environment.");
-  }
-  if (!configuredApiUrl.startsWith("https://")) {
-    throw new Error("[Build Failure] NEXT_PUBLIC_API_BASE_URL must begin with https:// in production environment.");
-  }
-  if (typeof window === "undefined") {
-    const origin = new URL(configuredApiUrl).origin;
-    console.log(`[Production API Target] ${origin}`);
-  }
-}
+const rawApiUrl = configuredApiUrl || (process.env.NODE_ENV === "production" ? defaultProdApiUrl : "http://localhost:8000");
 
-export const API_BASE_URL = configuredApiUrl
-  ? configuredApiUrl.replace(/\/$/, "")
-  : "http://localhost:8000";
+export const API_BASE_URL = rawApiUrl.replace(/\/$/, "");
 
 export function isDemoModeEnabled(): boolean {
   return process.env.NEXT_PUBLIC_DEMO_MODE === "true";

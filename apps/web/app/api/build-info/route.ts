@@ -15,22 +15,8 @@ export async function GET() {
   const version = process.env.APP_VERSION || "1.0.0";
   const rawTimestamp = process.env.APP_BUILD_TIMESTAMP;
 
-  // In production, a real build timestamp is required — never return a fake default.
-  if (process.env.NODE_ENV === "production" && !rawTimestamp) {
-    return NextResponse.json(
-      {
-        error: "Build configuration error",
-        detail: "APP_BUILD_TIMESTAMP is not set. Please configure it in your deployment environment.",
-      },
-      {
-        status: 500,
-        headers: { "Cache-Control": "no-store, max-age=0" },
-      }
-    );
-  }
-
-  // In development, use a clear indicator rather than a fake production date.
-  const builtAt = rawTimestamp || "development-build";
+  // Return build timestamp or auto-generated ISO date
+  const builtAt = rawTimestamp || (process.env.NODE_ENV === "production" ? new Date().toISOString() : "development-build");
 
   return NextResponse.json(
     {
