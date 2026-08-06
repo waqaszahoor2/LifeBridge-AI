@@ -21,10 +21,40 @@ interface NotificationContextType {
   clearNotifications: () => void;
 }
 
+const INITIAL_NOTIFICATIONS: Notification[] = [
+  {
+    id: "notif_1",
+    title: "STEM Scholarship Alert 2026",
+    message: "New fully funded international scholarship added to your opportunity stream.",
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    read: false,
+    category: "scholarship",
+    data_mode: "demo",
+  },
+  {
+    id: "notif_2",
+    title: "Regional Weather Advisory",
+    message: "Cloudy conditions with occasional precipitation expected in Guwahati, Assam.",
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+    read: false,
+    category: "weather",
+    data_mode: "demo",
+  },
+  {
+    id: "notif_3",
+    title: "VerifyLink Trust Update",
+    message: "Remember to verify unconfirmed job offers before submitting upfront fees.",
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    read: true,
+    category: "safety",
+    data_mode: "demo",
+  },
+];
+
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

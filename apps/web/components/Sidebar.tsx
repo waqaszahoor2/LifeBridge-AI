@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./ui/Icon";
+import { useAuth } from "@/context/AuthContext";
+import { useSavedItems } from "@/context/SavedItemsContext";
 
 interface NavGroupItem {
   href: string;
@@ -11,102 +13,140 @@ interface NavGroupItem {
   badge?: string;
 }
 
-const navItems: NavGroupItem[] = [
+const mainNavItems: NavGroupItem[] = [
   { href: "/for-you", label: "For You", icon: "sparkles" },
   { href: "/assistant", label: "AI Assistant", icon: "sparkles", badge: "AI" },
-  { href: "/skills/mentor", label: "AI Skill Mentor", icon: "academic" },
   { href: "/opportunities", label: "Opportunities", icon: "clock" },
   { href: "/jobs", label: "Jobs", icon: "briefcase" },
   { href: "/scholarships", label: "Scholarships", icon: "academic" },
-  { href: "/disasters", label: "Safety Alerts", icon: "alert" },
+  { href: "/disasters", label: "Disasters", icon: "alert" },
+  { href: "/weather", label: "Weather", icon: "cloud" },
   { href: "/services", label: "Services", icon: "services" },
-  { href: "/decision-graph", label: "Decision Graph", icon: "sparkles" },
-  { href: "/trust-scanner", label: "Trust Scanner", icon: "shield" },
-  { href: "/accessibility", label: "AccessLink", icon: "user" },
-  { href: "/skills", label: "CV SkillBridge", icon: "book" },
+  { href: "/trust-scanner", label: "Safety & Trust", icon: "shield" },
+  { href: "/skills", label: "Skills & CV", icon: "book" },
   { href: "/saved", label: "Saved Items", icon: "bookmark" },
 ];
 
-
-
 export function Sidebar() {
   const pathname = usePathname();
+  const { isAuthenticated, user, logout } = useAuth();
+  const { savedCount } = useSavedItems();
 
   return (
-    <aside className="lb-desktop-sidebar" aria-label="Main Navigation Sidebar">
+    <aside className="w-[250px] shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-screen sticky top-0 z-40 overflow-y-auto" aria-label="Main Navigation Sidebar">
       {/* Brand Header */}
-      <Link href="/for-you" className="sidebar-brand" aria-label="LifeBridge AI Home">
-        <div className="brand-logo-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-              fill="url(#brandGrad)"
-            />
-            <defs>
-              <linearGradient id="brandGrad" x1="2" y1="3" x2="22" y2="21" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#078F87" />
-                <stop offset="1" stopColor="#0DA7A0" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <div className="brand-text-block">
-          <span className="brand-title">LifeBridge AI</span>
-          <span className="brand-sub">AI for a safer, healthier life</span>
-        </div>
-      </Link>
+      <div className="p-4 border-b border-slate-100 dark:border-slate-800">
+        <Link href="/for-you" className="flex items-center gap-2.5 group" aria-label="LifeBridge AI Home">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 via-primary-700 to-teal-500 flex items-center justify-center text-white font-extrabold text-base shadow-sm group-hover:scale-105 transition-transform">
+            LB
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-extrabold text-base text-slate-900 dark:text-white leading-none tracking-tight">LifeBridge AI</span>
+            <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold tracking-wide uppercase mt-0.5">Intelligence Feed</span>
+          </div>
+        </Link>
+      </div>
 
       {/* Primary Navigation Links */}
-      <nav className="sidebar-nav-list" aria-label="Primary Navigation">
-        {navItems.map((item) => {
+      <nav className="p-3 space-y-1 flex-1 overflow-y-auto" aria-label="Primary Navigation">
+        {mainNavItems.map((item) => {
           const isActive = pathname === item.href || (item.href === "/for-you" && pathname === "/");
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`sidebar-nav-item ${isActive ? "active" : ""}`}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                isActive
+                  ? "bg-primary-50 dark:bg-primary-950/60 text-primary-600 dark:text-primary-400 font-extrabold shadow-xs"
+                  : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+              }`}
             >
-              <Icon name={item.icon} size={18} className="nav-icon" />
-              <span className="nav-text">{item.label}</span>
-              {item.badge && <span className="nav-badge">{item.badge}</span>}
+              <div className="flex items-center gap-2.5">
+                <Icon name={item.icon} size={17} className={isActive ? "text-primary-600 dark:text-primary-400" : "text-slate-400"} />
+                <span>{item.label}</span>
+              </div>
+              {item.href === "/saved" && savedCount > 0 ? (
+                <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-primary-600 text-white">
+                  {savedCount}
+                </span>
+              ) : item.badge ? (
+                <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-md bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                  {item.badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}
       </nav>
 
-      {/* AI Assistant Promo Card */}
-      <div className="assistant-promo-card">
-        <div className="promo-header">
-          <span className="promo-title">LifeBridge AI Assistant</span>
-          <span className="beta-badge">Beta</span>
+      {/* AI Companion Promo Card */}
+      <div className="p-3">
+        <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900 via-primary-950 to-teal-950 text-white border border-primary-800/40 shadow-xs space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-bold">
+            <span className="flex items-center gap-1.5 text-teal-400">
+              <Icon name="sparkles" size={14} /> AI Companion
+            </span>
+            <span className="px-1.5 py-0.5 rounded text-[9px] bg-white/10 text-white">v1.0</span>
+          </div>
+          <p className="text-[11px] text-slate-300 leading-snug">
+            Instant help for opportunities, emergency safety, & skill roadmaps.
+          </p>
+          <Link
+            href="/assistant"
+            className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-xl bg-gradient-to-r from-primary-500 to-teal-400 text-slate-950 font-bold text-xs hover:opacity-95 shadow-sm transition-all"
+          >
+            <Icon name="sparkles" size={13} />
+            <span>Chat Assistant</span>
+          </Link>
         </div>
-        <p className="promo-desc">
-          Your AI companion for health, safety, learning and more.
-        </p>
-        <Link href="/assistant" className="promo-btn">
-          <Icon name="sparkles" size={15} />
-          <span>Chat Now</span>
-        </Link>
-
       </div>
 
-      {/* Footer Navigation Options */}
-      <div className="sidebar-footer-links space-y-1">
-        <Link href="/settings" className={`footer-link ${pathname === "/settings" ? "active" : ""}`}>
+      {/* Footer System Links & User Profile */}
+      <div className="p-3 border-t border-slate-100 dark:border-slate-800 space-y-1 text-xs">
+        <Link
+          href="/profile"
+          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl font-semibold transition-colors ${
+            pathname === "/profile"
+              ? "bg-slate-100 dark:bg-slate-800 text-primary-600 dark:text-primary-400"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+          }`}
+        >
+          <Icon name="user" size={16} />
+          <span>Profile & Preferences</span>
+        </Link>
+        <Link
+          href="/settings"
+          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl font-semibold transition-colors ${
+            pathname === "/settings"
+              ? "bg-slate-100 dark:bg-slate-800 text-primary-600 dark:text-primary-400"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+          }`}
+        >
           <Icon name="settings" size={16} />
           <span>Settings</span>
         </Link>
-        <Link href="/help" className={`footer-link ${pathname === "/help" ? "active" : ""}`}>
+        <Link
+          href="/help"
+          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl font-semibold transition-colors ${
+            pathname === "/help"
+              ? "bg-slate-100 dark:bg-slate-800 text-primary-600 dark:text-primary-400"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
+          }`}
+        >
           <Icon name="help" size={16} />
           <span>Help & Support</span>
         </Link>
-        <Link href="/privacy" className={`footer-link ${pathname === "/privacy" ? "active" : ""}`}>
-          <Icon name="shield" size={16} />
-          <span>Privacy & Terms</span>
-        </Link>
+        {isAuthenticated && (
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 w-full text-left transition-colors"
+          >
+            <Icon name="logout" size={16} />
+            <span>Log Out</span>
+          </button>
+        )}
       </div>
     </aside>
   );
 }
-
-

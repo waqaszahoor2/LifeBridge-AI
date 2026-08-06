@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { Icon } from "./ui/Icon";
 
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useNotifications } from "@/context/NotificationContext";
+import { RelativeTime } from "./RelativeTime";
 
 export function Header({
+  pageTitle = "For You",
+  pageSubtitle = "Verified updates, AI recommendations, and local safety alerts.",
   onRefresh,
   isRefreshing,
 }: {
@@ -20,171 +23,228 @@ export function Header({
   isRefreshing?: boolean;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
-  const { unreadCount, markAllAsRead } = useNotifications();
-  
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const notificationLabel =
-    unreadCount > 0
-      ? `${unreadCount} unread notification${unreadCount === 1 ? "" : "s"}`
-      : "No unread notifications";
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/opportunities?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
-  const navItems = [
-    { href: "/for-you", label: "For You", icon: "sparkles" as const },
-    { href: "/opportunities", label: "Opportunities", icon: "briefcase" as const },
-    { href: "/skills", label: "Skills", icon: "academic" as const },
-    { href: "/services", label: "Services", icon: "services" as const },
-  ];
+  const displayTitle = pageTitle || getTitleFromPath(pathname);
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs">
-      <div className="max-w-[1200px] mx-auto px-4 h-14 flex items-center justify-between gap-3 sm:gap-4">
-        {/* Brand Logo & Search Input */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-          <Link href="/for-you" className="flex items-center gap-2 shrink-0 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-teal-500 flex items-center justify-center text-white font-extrabold text-sm shadow-xs group-hover:scale-105 transition-transform">
-              LB
-            </div>
-            <div className="hidden md:flex flex-col">
-              <span className="font-extrabold text-sm text-slate-900 dark:text-white leading-none">LifeBridge AI</span>
-              <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold tracking-wide">INTELLIGENCE</span>
-            </div>
-          </Link>
-
-          {/* Global Search Bar */}
-          <div className="relative flex-1 max-w-[280px] hidden sm:block">
-            <Icon name="search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search opportunities, skills, safety..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+    <header className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        {/* Page Title & Subtitle */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight truncate">
+              {displayTitle}
+            </span>
+            <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-900/60 shrink-0">
+              Live Feed
+            </span>
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate hidden sm:block">
+            {pageSubtitle}
+          </p>
         </div>
 
-        {/* Center / Right Navigation Items */}
-        <nav className="flex items-center gap-1 sm:gap-2">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || (item.href === "/for-you" && pathname === "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center justify-center px-2 sm:px-3 py-1 rounded-lg text-[11px] font-semibold transition-colors ${
-                  isActive
-                    ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/50"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
-                }`}
-              >
-                <Icon name={item.icon} size={18} />
-                <span className="hidden md:inline mt-0.5">{item.label}</span>
-              </Link>
-            );
-          })}
+        {/* Global Search Input */}
+        <form onSubmit={handleSearchSubmit} className="relative hidden md:block w-72">
+          <input
+            type="text"
+            placeholder="Search opportunities, skills, safety..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 pr-4 py-1.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+          <Icon name="search" size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        </form>
 
-          {/* AI Assistant Button */}
-          <Link
-            href="/assistant"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary-600 to-teal-500 text-white font-bold text-xs hover:opacity-95 shadow-xs transition-all shrink-0 ml-1"
-          >
-            <Icon name="sparkles" size={14} />
-            <span className="hidden sm:inline">AI Assistant</span>
-          </Link>
-
-          {/* Refresh Action (if provided) */}
+        {/* Header Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Refresh Action */}
           {onRefresh && (
             <button
               type="button"
               onClick={onRefresh}
               disabled={isRefreshing}
-              className={`p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${isRefreshing ? "animate-spin opacity-60" : ""}`}
+              className={`p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
+                isRefreshing ? "animate-spin opacity-60" : ""
+              }`}
               title="Refresh Feed"
             >
-              <Icon name="refresh" size={18} />
+              <Icon name="refresh" size={17} />
             </button>
           )}
 
-          {/* Notifications Button */}
-          <button
-            type="button"
-            className="relative p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            aria-label={notificationLabel}
-            onClick={() => markAllAsRead()}
-            title="Notifications"
-          >
-            <Icon name="bell" size={18} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 bg-red-500 text-white font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
-                {unreadCount}
-              </span>
+          {/* Notifications Dropdown */}
+          <div className="relative">
+            <button
+              type="button"
+              className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              onClick={() => {
+                setShowNotifications((prev) => !prev);
+                setShowProfileMenu(false);
+              }}
+              title="Notifications"
+            >
+              <Icon name="bell" size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 bg-red-500 text-white font-extrabold text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 top-12 w-80 sm:w-96 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider">
+                    Notifications ({unreadCount} Unread)
+                  </h3>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => markAllAsRead()}
+                      className="text-[11px] font-bold text-primary-600 dark:text-primary-400 hover:underline"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {notifications.length > 0 ? (
+                    notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        onClick={() => markAsRead(notif.id)}
+                        className={`p-3 rounded-xl border text-xs cursor-pointer transition-colors space-y-1 ${
+                          notif.read
+                            ? "bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400"
+                            : "bg-primary-50/70 dark:bg-primary-950/40 border-primary-200/70 dark:border-primary-900/50 text-slate-900 dark:text-white font-semibold"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold truncate">{notif.title}</span>
+                          <span className="text-[10px] text-slate-400 shrink-0">
+                            <RelativeTime value={notif.created_at} />
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{notif.message}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-4">No notifications at this time.</p>
+                  )}
+                </div>
+              </div>
             )}
-          </button>
+          </div>
 
           {/* Theme Toggle */}
           <ThemeToggle mode={theme} onChange={setTheme} />
 
-          {/* User Account Menu Dropdown */}
+          {/* User Account Greeting & Avatar Dropdown */}
           <div className="relative">
             <button
               type="button"
-              className="flex items-center gap-1.5 p-1 rounded-full border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              onClick={() => setShowProfileMenu((prev) => !prev)}
-              aria-expanded={showProfileMenu}
+              className="flex items-center gap-2 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              onClick={() => {
+                setShowProfileMenu((prev) => !prev);
+                setShowNotifications(false);
+              }}
               aria-label="User Account Options"
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-teal-400 text-white font-bold text-xs flex items-center justify-center">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-500 to-teal-400 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
                 {isAuthenticated && user?.name ? user.name.slice(0, 1).toUpperCase() : "G"}
               </div>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 hidden sm:inline">
+                {isAuthenticated ? user?.name || "Demo User" : "Hello, Guest"}
+              </span>
             </button>
 
             {showProfileMenu && (
-              <div className="absolute right-0 top-11 w-56 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 flex flex-col gap-1 text-xs">
-                {isAuthenticated ? (
-                  <>
-                    <div className="px-2 py-1">
-                      <div className="font-bold text-slate-900 dark:text-white">{user?.name || "Demo User"}</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">{user?.email || "demo@lifebridge.ai"}</div>
-                    </div>
-                    <hr className="my-1 border-slate-100 dark:border-slate-800" />
-                    <Link href="/profile" className="px-2 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-semibold" onClick={() => setShowProfileMenu(false)}>
-                      <Icon name="user" size={14} /> My Profile & Preferences
-                    </Link>
-                    <Link href="/saved" className="px-2 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 font-semibold" onClick={() => setShowProfileMenu(false)}>
-                      <Icon name="bookmark" size={14} /> Saved Opportunities
-                    </Link>
-                    <button
-                      type="button"
-                      className="px-2 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2 font-semibold w-full text-left"
-                      onClick={() => {
-                        logout();
-                        setShowProfileMenu(false);
-                      }}
-                    >
-                      <Icon name="logout" size={14} /> Clear Demo Profile
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="px-2 py-1">
-                      <div className="font-bold text-slate-900 dark:text-white">Guest Explorer</div>
-                      <div className="text-[11px] text-slate-500 dark:text-slate-400">Local session active</div>
-                    </div>
-                    <hr className="my-1 border-slate-100 dark:border-slate-800" />
-                    <Link href="/profile" className="px-2 py-1.5 rounded-lg text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/30 flex items-center gap-2 font-semibold" onClick={() => setShowProfileMenu(false)}>
-                      <Icon name="user" size={14} /> Build Profile
-                    </Link>
-                  </>
+              <div className="absolute right-0 top-12 w-64 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl z-50 space-y-2 text-xs">
+                <div className="px-2 py-1">
+                  <div className="font-bold text-slate-900 dark:text-white">{isAuthenticated ? user?.name || "Demo Profile" : "Guest Explorer"}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">{isAuthenticated ? user?.email || "demo@lifebridge.ai" : "Local Demo Session"}</div>
+                </div>
+                <hr className="border-slate-100 dark:border-slate-800" />
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <Icon name="user" size={15} /> My Profile & Preferences
+                </Link>
+                <Link
+                  href="/saved"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <Icon name="bookmark" size={15} /> Saved Opportunities
+                </Link>
+                {isAuthenticated && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 font-semibold w-full text-left"
+                    onClick={() => {
+                      logout();
+                      setShowProfileMenu(false);
+                    }}
+                  >
+                    <Icon name="logout" size={15} /> Clear Demo Session
+                  </button>
                 )}
               </div>
             )}
           </div>
-        </nav>
+        </div>
       </div>
     </header>
   );
+}
+
+function getTitleFromPath(pathname: string): string {
+  switch (pathname) {
+    case "/assistant":
+      return "AI Assistant";
+    case "/for-you":
+    case "/":
+      return "For You Feed";
+    case "/jobs":
+      return "Jobs & Careers";
+    case "/scholarships":
+      return "Scholarships & Funding";
+    case "/disasters":
+      return "DisasterLink Safety";
+    case "/weather":
+      return "Weather Advisories";
+    case "/services":
+      return "ServiceLink Finder";
+    case "/opportunities":
+      return "Opportunities Explorer";
+    case "/skills":
+      return "SkillBridge CV Intelligence";
+    case "/trust-scanner":
+      return "VerifyLink Trust Scanner";
+    case "/profile":
+      return "Profile & Preferences";
+    case "/saved":
+      return "Saved Items";
+    default:
+      return "LifeBridge AI";
+  }
 }

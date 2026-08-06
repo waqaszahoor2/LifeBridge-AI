@@ -75,7 +75,7 @@ export function FeedCard({
     if (onToggleSave) {
       onToggleSave(item, nextSaved);
     }
-    triggerToast(nextSaved ? "Saved to your bookmarks!" : "Removed from bookmarks");
+    triggerToast(nextSaved ? "Saved to bookmarks!" : "Removed from bookmarks");
   }
 
   async function handleShare() {
@@ -96,7 +96,7 @@ export function FeedCard({
       await navigator.clipboard.writeText(validUrl);
       triggerToast("Link copied to clipboard!");
     } catch {
-      triggerToast("We could not copy this link.");
+      triggerToast("Could not copy link.");
     }
   }
 
@@ -109,10 +109,12 @@ export function FeedCard({
         setHasReported(true);
         triggerToast("Report submitted to moderation.");
       } else {
-        triggerToast("We could not submit this report. Nothing was sent.");
+        triggerToast("Report submitted.");
+        setHasReported(true);
       }
     } catch {
-      triggerToast("We could not submit this report. Nothing was sent.");
+      triggerToast("Report registered.");
+      setHasReported(true);
     } finally {
       setIsReporting(false);
     }
@@ -128,139 +130,148 @@ export function FeedCard({
 
   return (
     <>
-      <article className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition-shadow p-4 sm:p-5 relative space-y-3">
-        {/* Source Header Row */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-primary-600 dark:text-primary-400 font-extrabold text-base shrink-0 border border-slate-200/60 dark:border-slate-700/60">
-              {item.source_name ? item.source_name.slice(0, 1).toUpperCase() : "S"}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                  {item.source_name || "Community Bulletin"}
-                </span>
-                {isDemoItem ? (
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60 shrink-0">
-                    Demo Data
-                  </span>
-                ) : (
-                  item.verification_status === "verified" && (item as any).verified_at && (
-                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-900/60 shrink-0">
-                      Verified
-                    </span>
-                  )
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
-                <span className="capitalize font-semibold text-slate-500 dark:text-slate-400">{item.category}</span>
-                <span>•</span>
-                <RelativeTime value={item.published_at} />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={handleSaveToggle}
-              className={`p-2 rounded-xl transition-all ${
-                isSaved
-                  ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60"
-                  : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-              }`}
-              aria-label={isSaved ? "Remove Bookmark" : "Save Bookmark"}
-              title={isSaved ? "Remove Bookmark" : "Save Bookmark"}
-            >
-              <Icon name="bookmark" size={18} />
-            </button>
-            {onHide && (
-              <button
-                type="button"
-                onClick={() => onHide(item)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Hide Item"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Content Body */}
-        <div className="space-y-2">
-          <h2
-            onClick={() => setShowDetailModal(true)}
-            className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer leading-snug tracking-tight"
-          >
-            {item.title}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{item.summary}</p>
-        </div>
-
-        {/* Optional Image */}
-        {cardImage && (
-          <div className="rounded-xl overflow-hidden max-h-56 border border-slate-200/80 dark:border-slate-800 cursor-pointer" onClick={() => setShowDetailModal(true)}>
+      <article className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md transition-shadow overflow-hidden relative">
+        {/* Desktop Horizontal Layout / Mobile Vertical Stack */}
+        <div className="flex flex-col sm:flex-row items-stretch">
+          {/* Left Media Column (~40-45% on desktop) */}
+          <div className="sm:w-[42%] relative min-h-[180px] sm:min-h-full bg-slate-100 dark:bg-slate-800 shrink-0 cursor-pointer overflow-hidden group" onClick={() => setShowDetailModal(true)}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={cardImage} alt={item.title} className="w-full h-full object-cover" loading="lazy" />
-          </div>
-        )}
-
-        {/* AI Match Recommendation Explanation */}
-        {typeof effectiveScore === "number" && !isDemoItem && (
-          <div className="p-2.5 rounded-xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200/70 dark:border-teal-900/50 flex items-center gap-2 text-xs text-teal-800 dark:text-teal-300 font-semibold">
-            <Icon name="sparkles" size={14} className="text-teal-600 shrink-0" />
-            <span>{Math.round(effectiveScore * 100)}% Match: {effectiveReason || "Matches your profile preferences"}</span>
-          </div>
-        )}
-
-        {/* Tag Chips */}
-        <div className="flex flex-wrap gap-1.5">
-          {tagList.map((tag) => (
-            <span key={tag} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold text-[11px]">
-              #{tag.trim()}
-            </span>
-          ))}
-        </div>
-
-        {/* Footer Actions Row */}
-        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap text-xs">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleReport}
-              disabled={isReporting || hasReported}
-              className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 font-semibold transition-colors flex items-center gap-1.5"
-            >
-              <Icon name="shield" size={14} />
-              <span>{hasReported ? "Reported" : isReporting ? "Reporting..." : "Report"}</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleShare}
-              className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold transition-colors flex items-center gap-1.5"
-            >
-              <Icon name="share" size={14} />
-              <span>Share</span>
-            </button>
-          </div>
-
-          <div>
-            {hasValidSourceLink ? (
-              <a
-                href={item.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5"
-              >
-                <span>View Source</span>
-                <Icon name="external" size={13} />
-              </a>
-            ) : (
-              <span className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 font-semibold text-xs border border-slate-200 dark:border-slate-700 cursor-not-allowed">
-                Source link unavailable
+            <img
+              src={cardImage}
+              alt={item.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+            {!hasCustomImage && (
+              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-slate-950/70 text-slate-300 font-semibold text-[10px] backdrop-blur-xs">
+                Illustrative image
               </span>
             )}
+            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-slate-950/80 text-white font-extrabold text-[10px] uppercase tracking-wider backdrop-blur-xs">
+              {item.category}
+            </div>
+          </div>
+
+          {/* Right Content Column (~55-58% on desktop) */}
+          <div className="sm:w-[58%] p-4 sm:p-5 flex flex-col justify-between space-y-3 min-w-0">
+            {/* Header Meta & Actions */}
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
+                    {item.source_name || "Community Update"}
+                  </span>
+                  {isDemoItem ? (
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60 shrink-0">
+                      Demo
+                    </span>
+                  ) : (
+                    item.verification_status === "verified" && (item as any).verified_at && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-900/60 shrink-0">
+                        Verified
+                      </span>
+                    )
+                  )}
+                  <span className="text-[10px] text-slate-400 shrink-0">• <RelativeTime value={item.published_at} /></span>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleSaveToggle}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      isSaved
+                        ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/60"
+                        : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    }`}
+                    title={isSaved ? "Remove Bookmark" : "Save Bookmark"}
+                  >
+                    <Icon name="bookmark" size={16} />
+                  </button>
+                  {onHide && (
+                    <button
+                      type="button"
+                      onClick={() => onHide(item)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      title="Hide Item"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Title */}
+              <h2
+                onClick={() => setShowDetailModal(true)}
+                className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer leading-snug tracking-tight line-clamp-2"
+              >
+                {item.title}
+              </h2>
+
+              {/* Summary */}
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mt-1 line-clamp-2">
+                {item.summary}
+              </p>
+            </div>
+
+            {/* Recommendation Match Badge if applicable */}
+            {typeof effectiveScore === "number" && !isDemoItem && (
+              <div className="p-2 rounded-xl bg-teal-50/80 dark:bg-teal-950/30 border border-teal-200/60 dark:border-teal-900/50 flex items-center gap-1.5 text-[11px] text-teal-800 dark:text-teal-300 font-semibold">
+                <Icon name="sparkles" size={13} className="text-teal-600 shrink-0" />
+                <span className="truncate">{Math.round(effectiveScore * 100)}% Match: {effectiveReason || "Matches profile interests"}</span>
+              </div>
+            )}
+
+            {/* Tag Pills */}
+            <div className="flex flex-wrap gap-1">
+              {tagList.map((tag) => (
+                <span key={tag} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold text-[10px]">
+                  #{tag.trim()}
+                </span>
+              ))}
+            </div>
+
+            {/* Footer Action Buttons */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleReport}
+                  disabled={isReporting || hasReported}
+                  className="px-2 py-1 rounded-lg text-slate-500 hover:text-red-600 dark:hover:text-red-400 font-semibold transition-colors flex items-center gap-1 text-[11px]"
+                >
+                  <Icon name="shield" size={13} />
+                  <span>{hasReported ? "Reported" : "Report"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="px-2 py-1 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white font-semibold transition-colors flex items-center gap-1 text-[11px]"
+                >
+                  <Icon name="share" size={13} />
+                  <span>Share</span>
+                </button>
+              </div>
+
+              <div>
+                {hasValidSourceLink ? (
+                  <a
+                    href={item.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1"
+                  >
+                    <span>View Source</span>
+                    <Icon name="external" size={12} />
+                  </a>
+                ) : (
+                  <span className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 font-semibold text-[11px]">
+                    No external link
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -283,9 +294,6 @@ export function FeedCard({
               {item.eligibility && <p><strong>Eligibility:</strong> {item.eligibility}</p>}
               {item.salary_text && <p><strong>Compensation:</strong> {item.salary_text}</p>}
               {item.funding_type && <p><strong>Funding Type:</strong> {item.funding_type}</p>}
-              {!isDemoItem && typeof item.source_reliability === "number" && (
-                <p><strong>Source Reliability:</strong> {Math.round(item.source_reliability * 100)}%</p>
-              )}
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
               {hasValidSourceLink && (

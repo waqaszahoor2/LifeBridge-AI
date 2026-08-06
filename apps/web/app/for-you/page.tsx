@@ -5,12 +5,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { FeedCard } from "@/components/FeedCard";
-import { LeftSidebar } from "@/components/LeftSidebar";
 import { RightSidebar } from "@/components/RightSidebar";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { fetchForYouFeed, fetchRecommendations, isDemoModeEnabled, triggerFeedRefresh } from "@/lib/api";
 import { sampleFeed } from "@/lib/sample-data";
-import { readLocalProfile } from "@/lib/profile";
+import { readLocalProfile, getStoredProfile } from "@/lib/profile";
 import { useSavedItems } from "@/context/SavedItemsContext";
 import { useAuth } from "@/context/AuthContext";
 import type { FeedCategory, FeedItem } from "@/lib/types";
@@ -31,7 +30,7 @@ function ForYouContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
-  const { isSaved, toggleSave } = useSavedItems();
+  const { savedCount, isSaved, toggleSave } = useSavedItems();
 
   const initialCategory = (searchParams.get("category") as CategoryKey) || "all";
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>(initialCategory);
@@ -52,6 +51,7 @@ function ForYouContent() {
   const [hiddenIds, setHiddenIds] = useState<Set<number>>(new Set());
   const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
   const [hasProfile, setHasProfile] = useState<boolean>(false);
+  const [profileCompleteness, setProfileCompleteness] = useState<number>(0);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isDemo = isDemoModeEnabled();
@@ -99,10 +99,23 @@ function ForYouContent() {
         setNextCursor(null);
       }
 
-      // Check local profile & load recommendations strictly if profile exists
+      // Check profile & recommendations strictly if profile exists
       const userProf = readLocalProfile();
       if (userProf) {
         setHasProfile(true);
+        const checkedFields = [
+          userProf.name,
+          userProf.country,
+          userProf.study_level,
+          userProf.field_of_study,
+          userProf.skills && userProf.skills.length > 0 ? true : null,
+          userProf.target_goal,
+          userProf.opportunity_type,
+          userProf.notification_pref,
+        ];
+        const filled = checkedFields.filter(Boolean).length;
+        setProfileCompleteness(Math.min(100, Math.round((filled / 8) * 100)));
+
         const recs = await fetchRecommendations(userProf as unknown as Record<string, unknown>).catch(() => []);
         if (recs && recs.length > 0) {
           const map: Record<number, { score: number; reasons: string[] }> = {};
@@ -113,6 +126,7 @@ function ForYouContent() {
         }
       } else {
         setHasProfile(false);
+        setProfileCompleteness(0);
         setRecommendations({});
       }
     } catch {
@@ -125,7 +139,6 @@ function ForYouContent() {
         setHasMore(false);
         setNextCursor(null);
       } else {
-        // User-friendly error message — no technical infra jargon exposed
         setErrorMsg("Live updates are temporarily unavailable. Please try again in a moment.");
         setItems([]);
         setHasMore(false);
@@ -140,7 +153,7 @@ function ForYouContent() {
     loadInitialFeed();
   }, [loadInitialFeed]);
 
-  // Load next cursor-paginated page
+  // Load next page
   const loadNextPage = useCallback(async () => {
     if (loadingMore || !hasMore || errorMsg) return;
     setLoadingMore(true);
@@ -172,7 +185,7 @@ function ForYouContent() {
     }
   }, [loadingMore, hasMore, errorMsg, items, selectedCategory, nextCursor]);
 
-  // IntersectionObserver for continuous infinite scroll
+  // Infinite scroll
   useEffect(() => {
     if (!sentinelRef.current || !hasMore || loading || loadingMore || errorMsg) return;
 
@@ -254,15 +267,36 @@ function ForYouContent() {
 
   return (
     <AppShell onRefresh={handleManualRefresh} isRefreshing={loading}>
-      {/* 3-Column LinkedIn-Style Desktop Layout Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_300px] gap-5 items-start">
-        {/* LEFT COLUMN: Profile Card & Shortcuts */}
-        <div className="hidden lg:block sticky top-20">
-          <LeftSidebar />
-        </div>
+      {/* 2-Column Desktop Grid Layout: Feed Column (min 650px flex-1) + Right Sidebar (320px) */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        {/* CENTER FEED COLUMN */}
+        <div className="flex-1 min-w-0 space-y-4 w-full">
+          {/* User Profile Summary Bar */}
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary-500 to-teal-400 text-white font-extrabold text-base flex items-center justify-center shrink-0">
+                {isAuthenticated && user?.name ? user.name.slice(0, 1).toUpperCase() : "G"}
+              </div>
+              <div>
+                <h2 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                  {isAuthenticated ? `Welcome back, ${user?.name || "Demo Profile"}` : "Guest Explorer"}
+                </h2>
+                <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                  <span>Profile Completeness: <strong className="text-teal-600 dark:text-teal-400">{profileCompleteness}%</strong></span>
+                  <span>•</span>
+                  <span>Saved: <strong className="text-primary-600">{savedCount} items</strong></span>
+                </div>
+              </div>
+            </div>
 
-        {/* CENTER COLUMN: Feed Composer, Categories, Toolbar, & Feed Cards */}
-        <div className="space-y-4 min-w-0">
+            <Link
+              href="/profile"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-primary-50 dark:hover:bg-primary-950/40 text-primary-600 dark:text-primary-400 font-bold text-xs border border-slate-200/80 dark:border-slate-700/80 transition-all shrink-0"
+            >
+              Build My Profile &rarr;
+            </Link>
+          </div>
+
           {/* Feed Composer Card */}
           <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs p-4 space-y-3">
             <div className="flex items-center gap-3">
@@ -280,7 +314,7 @@ function ForYouContent() {
 
             <hr className="border-slate-100 dark:border-slate-800" />
 
-            {/* Action Buttons Row */}
+            {/* Quick Action Triggers */}
             <div className="flex items-center justify-between gap-1 text-xs font-semibold overflow-x-auto no-scrollbar">
               <Link href="/assistant" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors shrink-0">
                 <Icon name="sparkles" size={16} className="text-primary-600" />
@@ -345,7 +379,7 @@ function ForYouContent() {
             <div className="relative flex-1 min-w-[200px]">
               <input
                 type="text"
-                placeholder="Search feed by keyword or source..."
+                placeholder="Filter feed by title, tag, or location..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -376,7 +410,7 @@ function ForYouContent() {
             </div>
           </div>
 
-          {/* User-Friendly Error Banner (if API error occurs) */}
+          {/* Error Banner */}
           {errorMsg && (
             <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-red-200 dark:border-red-900/50 shadow-xs text-center space-y-3">
               <Icon name="alert" size={28} className="mx-auto text-red-500" />
@@ -399,14 +433,8 @@ function ForYouContent() {
               <div className="space-y-4">
                 {[1, 2, 3].map((n) => (
                   <div key={n} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl" />
-                      <div className="space-y-1 flex-1">
-                        <div className="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/3" />
-                        <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
-                      </div>
-                    </div>
-                    <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
+                    <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/4" />
+                    <div className="h-6 bg-slate-200 dark:bg-slate-800 rounded w-3/4" />
                     <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-full" />
                   </div>
                 ))}
@@ -422,7 +450,7 @@ function ForYouContent() {
                       matchScore={rec ? rec.score : undefined}
                       reasons={rec ? rec.reasons : undefined}
                       isSavedInitial={isSaved(item.id)}
-                      onToggleSave={(i, s) => toggleSave(i.id)}
+                      onToggleSave={(i) => toggleSave(i.id)}
                       onHide={handleHideItem}
                     />
                   );
@@ -452,7 +480,7 @@ function ForYouContent() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Latest Opportunities & Information Rail */}
+        {/* RIGHT SIDEBAR COLUMN (Weather, Forecast, Quick Services, Stay Safe, Daily Tip) */}
         <div className="hidden lg:block sticky top-20">
           <RightSidebar />
         </div>
