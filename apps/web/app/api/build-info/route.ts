@@ -13,14 +13,31 @@ export async function GET() {
     "main";
 
   const version = process.env.APP_VERSION || "1.0.0";
-  const builtAt = process.env.APP_BUILD_TIMESTAMP || "2026-08-06T10:00:00.000Z";
+  const rawTimestamp = process.env.APP_BUILD_TIMESTAMP;
+
+  // In production, a real build timestamp is required — never return a fake default.
+  if (process.env.NODE_ENV === "production" && !rawTimestamp) {
+    return NextResponse.json(
+      {
+        error: "Build configuration error",
+        detail: "APP_BUILD_TIMESTAMP is not set. Please configure it in your deployment environment.",
+      },
+      {
+        status: 500,
+        headers: { "Cache-Control": "no-store, max-age=0" },
+      }
+    );
+  }
+
+  // In development, use a clear indicator rather than a fake production date.
+  const builtAt = rawTimestamp || "development-build";
 
   return NextResponse.json(
     {
       version,
       commit,
       branch,
-      environment: process.env.NODE_ENV || "production",
+      environment: process.env.NODE_ENV || "development",
       built_at: builtAt,
     },
     {

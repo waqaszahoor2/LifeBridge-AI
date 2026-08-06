@@ -97,7 +97,7 @@ def check_rate_limit(request: Request, limit_type: str = "chat", max_requests: i
     if is_prod and not redis_client:
         raise HTTPException(
             status_code=503,
-            detail="Distributed Redis rate limiter is required in production but unavailable.",
+            detail="The service is temporarily unavailable. Please try again later.",
         )
 
     if redis_client:
@@ -129,7 +129,7 @@ def check_rate_limit(request: Request, limit_type: str = "chat", max_requests: i
             if is_prod:
                 raise HTTPException(
                     status_code=503,
-                    detail="Distributed Redis rate limiter command failed in production.",
+                    detail="The service is temporarily unavailable. Please try again later.",
                 )
 
     # Development-only in-memory sliding window fallback

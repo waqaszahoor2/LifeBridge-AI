@@ -17,9 +17,10 @@ interface MessageUI {
   citations?: string[];
   disclaimer?: string;
   modelUsed?: string;
-  provider?: string; // "groq" | "local_demo" | "failed" | "stopped"
-  status?: string; // "success" | "fallback" | "error" | "stopped"
+  provider?: string; // "groq" | "local_demo" | "failed" | "stopped" | "pending" | "system"
+  status?: string;  // "success" | "fallback" | "error" | "stopped" | "streaming" | "information"
   timestamp: string;
+  requestId?: string; // Backend request reference for failure support
 }
 
 const STARTER_QUESTIONS = [
@@ -38,24 +39,31 @@ export default function AssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorRequestId, setErrorRequestId] = useState<string | null>(null);
   const [optInSaveHistory, setOptInSaveHistory] = useState<boolean>(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [healthStatus, setHealthStatus] = useState<{ isReady: boolean; provider: string }>({ isReady: false, provider: "Checking..." });
-  
+  const [healthStatus, setHealthStatus] = useState<{ isReady: boolean; provider: string }>({
+    isReady: false,
+    provider: "Connecting…",
+  });
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeAbortController = useRef<AbortController | null>(null);
 
-  // Check health on mount
-  // Check health & consent on mount
+  // ── Health check + consent on mount ─────────────────────────────────────
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/v1/assistant/health`)
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10_000);
+
+    fetch(`${API_BASE_URL}/api/v1/assistant/health`, { signal: ctrl.signal })
       .then((res) => {
         if (!res.ok) throw new Error("Health response not OK");
         return res.json();
       })
       .then((data) => {
-        const isLive = data.status === "ready" && data.configured === true && data.provider_verified === true;
+        const isLive =
+          data.status === "ready" && data.configured === true && data.provider_verified === true;
         const modelName = data.model || "llama-3.1-8b-instant";
         if (isLive) {
           setHealthStatus({ isReady: true, provider: `Groq Live (${modelName})` });
@@ -64,14 +72,17 @@ export default function AssistantPage() {
         } else if (data.status === "configuration_missing" || data.provider === "unavailable") {
           setHealthStatus({ isReady: false, provider: "Configuration Missing" });
         } else if (data.status === "verification_failed") {
-          setHealthStatus({ isReady: false, provider: "Verification Failed" });
+          setHealthStatus({ isReady: false, provider: "Provider Verification Failed" });
+        } else if (data.status === "verification_unknown") {
+          setHealthStatus({ isReady: false, provider: "Provider Verification Unavailable" });
         } else {
           setHealthStatus({ isReady: false, provider: "Service Unavailable" });
         }
       })
       .catch(() => {
         setHealthStatus({ isReady: false, provider: "Offline / Service Error" });
-      });
+      })
+      .finally(() => clearTimeout(timer));
 
     if (typeof window !== "undefined") {
       const consentValue = localStorage.getItem("lifebridge_opt_in_history") === "true";
@@ -94,7 +105,7 @@ export default function AssistantPage() {
             }
           }
         } catch {
-          // Fallback
+          // Fallback to initial message
         }
       } else {
         localStorage.removeItem("lifebridge_assistant_history");
@@ -107,7 +118,6 @@ export default function AssistantPage() {
         id: "init_1",
         sender: "assistant",
         text: "Hello! I am LifeBridge AI Assistant. Ask me about exploring opportunities, generating practical skill roadmaps, verifying suspicious content, or navigating platform tools.",
-        modelUsed: "llama-3.1-8b-instant",
         provider: "system",
         status: "information",
         disclaimer: "AI-generated guidance. Verify important information independently.",
@@ -116,16 +126,18 @@ export default function AssistantPage() {
     ]);
   }, []);
 
-  // Save history only if opt-in enabled
+  // ── Persist history when opt-in enabled ──────────────────────────────────
   useEffect(() => {
     if (typeof window !== "undefined") {
       if (optInSaveHistory && messages.length > 0) {
         try {
           localStorage.setItem("lifebridge_assistant_history", JSON.stringify(messages));
-          // 7-day expiration
-          localStorage.setItem("lifebridge_assistant_history_expiry", String(Date.now() + 7 * 86400 * 1000));
+          localStorage.setItem(
+            "lifebridge_assistant_history_expiry",
+            String(Date.now() + 7 * 86400 * 1000)
+          );
         } catch {
-          // Ignore
+          // Storage may be full
         }
       } else if (!optInSaveHistory) {
         localStorage.removeItem("lifebridge_assistant_history");
@@ -154,10 +166,10 @@ export default function AssistantPage() {
       {
         id: `init_${Date.now()}`,
         sender: "assistant",
-        text: mode === "skill_coach" 
-          ? "Welcome to AI Skill Coach! Tell me what skill or career role you want to learn, and I will build a step-by-step practical roadmap."
-          : "Hello! How can I assist you on LifeBridge AI today?",
-        modelUsed: "llama-3.1-8b-instant",
+        text:
+          mode === "skill_coach"
+            ? "Welcome to AI Skill Coach! Tell me what skill or career role you want to learn, and I will build a step-by-step practical roadmap."
+            : "Hello! How can I assist you on LifeBridge AI today?",
         provider: "system",
         status: "information",
         disclaimer: "AI-generated guidance. Verify important information independently.",
@@ -169,6 +181,7 @@ export default function AssistantPage() {
       localStorage.setItem("lifebridge_assistant_history", JSON.stringify(initial));
     }
     setErrorMsg(null);
+    setErrorRequestId(null);
   }
 
   function handleClearHistory() {
@@ -178,6 +191,7 @@ export default function AssistantPage() {
       localStorage.removeItem("lifebridge_assistant_history_expiry");
     }
     setErrorMsg(null);
+    setErrorRequestId(null);
   }
 
   async function executeSend(textToSend: string, baseMessages: MessageUI[]) {
@@ -190,11 +204,11 @@ export default function AssistantPage() {
 
     setInput("");
     setErrorMsg(null);
+    setErrorRequestId(null);
 
     const controller = new AbortController();
     activeAbortController.current = controller;
 
-    // Check if the user turn is already the latest message in baseMessages
     const lastMsg = baseMessages[baseMessages.length - 1];
     let currentMessages = baseMessages;
     if (!lastMsg || lastMsg.sender !== "user" || lastMsg.text !== textToSend) {
@@ -240,6 +254,7 @@ export default function AssistantPage() {
 
     try {
       let accumulatedText = "";
+
       await streamAssistantChat(
         {
           messages: apiMessages,
@@ -263,6 +278,7 @@ export default function AssistantPage() {
                     status: meta.status,
                     modelUsed: meta.model,
                     citations: meta.citations,
+                    requestId: meta.request_id,
                   }
                 : m
             )
@@ -274,10 +290,8 @@ export default function AssistantPage() {
       setMessages((prev) =>
         prev.map((m) => (m.id === assistantMsgId ? { ...m, isStreaming: false } : m))
       );
-      setLoading(false);
-    } catch (err: any) {
-      setLoading(false);
-      if (err?.name === "AbortError") {
+    } catch (err: unknown) {
+      if ((err as Error)?.name === "AbortError") {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsgId ? { ...m, status: "stopped", isStreaming: false } : m
@@ -285,6 +299,8 @@ export default function AssistantPage() {
         );
         return;
       }
+
+      const requestId: string | undefined = (err as { requestId?: string })?.requestId;
 
       setMessages((prev) =>
         prev.map((m) =>
@@ -295,11 +311,20 @@ export default function AssistantPage() {
                 provider: "failed",
                 text: "The live AI assistant is temporarily unavailable.",
                 isStreaming: false,
+                requestId: requestId,
               }
             : m
         )
       );
+
       setErrorMsg("The live AI assistant is temporarily unavailable.");
+      if (requestId) setErrorRequestId(requestId);
+    } finally {
+      // Always clear active controller and loading state
+      if (activeAbortController.current === controller) {
+        activeAbortController.current = null;
+      }
+      setLoading(false);
     }
   }
 
@@ -330,6 +355,7 @@ export default function AssistantPage() {
     }
   }
 
+  // handleRegenerate intentionally kept for future use
   function handleRegenerate() {
     if (loading) return;
     let cleaned = messages;
@@ -376,11 +402,13 @@ export default function AssistantPage() {
             <div>
               <h1 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 LifeBridge AI Assistant
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
-                  healthStatus.isReady
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                }`}>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                    healthStatus.isReady
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                  }`}
+                >
                   {healthStatus.provider}
                 </span>
               </h1>
@@ -394,6 +422,7 @@ export default function AssistantPage() {
                 checked={optInSaveHistory}
                 onChange={(e) => handleConsentToggle(e.target.checked)}
                 className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 w-3.5 h-3.5"
+                aria-label="Save chat history on this device"
               />
               <span>Save chat history on this device</span>
             </label>
@@ -402,6 +431,7 @@ export default function AssistantPage() {
               type="button"
               onClick={handleNewChat}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+              aria-label="Start new chat"
             >
               <Icon name="refresh" size={14} />
               <span>New Chat</span>
@@ -410,6 +440,7 @@ export default function AssistantPage() {
               type="button"
               onClick={handleClearHistory}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-rose-500/10 dark:bg-slate-800 hover:text-rose-600 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 transition-colors"
+              aria-label="Clear chat history"
             >
               Clear History
             </button>
@@ -417,9 +448,11 @@ export default function AssistantPage() {
         </div>
 
         {/* Mode Selector */}
-        <div className="flex items-center gap-2 my-3 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl w-fit">
+        <div className="flex items-center gap-2 my-3 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl w-fit" role="tablist" aria-label="Assistant mode">
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === "lifebridge_assistant"}
             onClick={() => setMode("lifebridge_assistant")}
             className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               mode === "lifebridge_assistant"
@@ -431,6 +464,8 @@ export default function AssistantPage() {
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={mode === "skill_coach"}
             onClick={() => setMode("skill_coach")}
             className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
               mode === "skill_coach"
@@ -444,19 +479,29 @@ export default function AssistantPage() {
 
         {/* Error Banner */}
         {errorMsg && (
-          <div className="mb-3 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Icon name="alert" size={16} />
-              <span>{errorMsg}</span>
+          <div
+            role="alert"
+            className="mb-3 p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400 flex flex-col gap-1"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Icon name="alert" size={16} />
+                <span>{errorMsg}</span>
+              </div>
+              <button type="button" onClick={handleRetry} className="underline font-semibold hover:opacity-80">
+                Retry Request
+              </button>
             </div>
-            <button type="button" onClick={handleRetry} className="underline font-semibold hover:opacity-80">
-              Retry Request
-            </button>
+            {errorRequestId && (
+              <p className="text-[10px] text-rose-500/80 font-mono mt-0.5">
+                Request reference: {errorRequestId}
+              </p>
+            )}
           </div>
         )}
 
         {/* Messages Stream Container */}
-        <div className="flex-1 overflow-y-auto pr-2 space-y-4 my-2">
+        <div className="flex-1 overflow-y-auto pr-2 space-y-4 my-2" aria-label="Chat messages">
           {messages.map((m) => (
             <div
               key={m.id}
@@ -478,13 +523,19 @@ export default function AssistantPage() {
                     ) : (
                       <>
                         <Icon name="sparkles" size={12} className="text-primary-400" />
-                        {/* Provider Badge Priority: 1. Stopped, 2. Error, 3. Pending/Streaming, 4. Groq, 5. Local Demo, 6. System */}
+                        {/* Provider Badge Priority */}
                         {m.status === "stopped" ? (
                           <span className="text-slate-400 font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">Stopped</span>
                         ) : m.status === "error" || m.provider === "failed" ? (
                           <span className="text-rose-500 font-semibold px-1.5 py-0.5 rounded bg-rose-500/10">Failed</span>
                         ) : m.provider === "pending" || m.isStreaming ? (
-                          <span className="text-sky-600 dark:text-sky-400 font-bold px-1.5 py-0.5 rounded bg-sky-500/10 animate-pulse">Thinking...</span>
+                          <span
+                            aria-live="polite"
+                            aria-label="Connecting to the live assistant"
+                            className="text-sky-600 dark:text-sky-400 font-bold px-1.5 py-0.5 rounded bg-sky-500/10 animate-pulse"
+                          >
+                            {m.provider === "pending" ? "Connecting…" : "Streaming…"}
+                          </span>
                         ) : m.provider === "groq" ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-500/10">Groq Live</span>
                         ) : m.provider === "local_demo" ? (
@@ -502,22 +553,30 @@ export default function AssistantPage() {
 
                 {m.sender === "assistant" && (
                   <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/50 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                    <div className="flex items-center gap-2">
-                      {m.modelUsed && (
-                        <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
-                          {m.modelUsed}
-                        </span>
-                      )}
-                      {m.citations && m.citations.some((c) => c.startsWith("http")) ? (
-                        <span>Sources: {m.citations.join(" • ")}</span>
-                      ) : (
-                        <span className="italic text-slate-400">AI-generated guidance. Verify important information independently.</span>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        {m.modelUsed && (
+                          <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                            {m.modelUsed}
+                          </span>
+                        )}
+                        {m.citations && m.citations.some((c) => c.startsWith("http")) ? (
+                          <span>Sources: {m.citations.join(" • ")}</span>
+                        ) : (
+                          <span className="italic text-slate-400">AI-generated guidance. Verify important information independently.</span>
+                        )}
+                      </div>
+                      {m.requestId && (m.status === "error" || m.provider === "failed") && (
+                        <p className="font-mono text-[10px] text-slate-400">
+                          Request reference: {m.requestId}
+                        </p>
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(m.text, m.id)}
                       className="inline-flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                      aria-label="Copy message to clipboard"
                     >
                       <Icon name="share" size={12} />
                       <span>{copiedId === m.id ? "Copied!" : "Copy"}</span>
@@ -529,7 +588,11 @@ export default function AssistantPage() {
           ))}
 
           {loading && (
-            <div className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit shadow-sm">
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-3 p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit shadow-sm"
+            >
               <Icon name="refresh" size={16} className="animate-spin text-primary-500" />
               <span className="text-xs text-slate-600 dark:text-slate-300">
                 Streaming response from {healthStatus.provider || "assistant"}…
@@ -538,6 +601,7 @@ export default function AssistantPage() {
                 type="button"
                 onClick={handleStopGenerating}
                 className="ml-4 px-3 py-1 text-xs text-rose-500 bg-rose-500/10 rounded-lg hover:bg-rose-500/20 font-semibold transition-colors"
+                aria-label="Stop generating response"
               >
                 Stop Generating
               </button>
@@ -547,7 +611,7 @@ export default function AssistantPage() {
         </div>
 
         {/* Starter Prompts Bar */}
-        <div className="py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="py-2 flex items-center gap-2 overflow-x-auto no-scrollbar" aria-label="Suggested prompts">
           <span className="text-xs font-semibold text-slate-400 whitespace-nowrap">Suggestions:</span>
           {STARTER_QUESTIONS.map((q, idx) => (
             <button
@@ -555,6 +619,7 @@ export default function AssistantPage() {
               type="button"
               onClick={() => handleSend(q)}
               className="px-3 py-1 text-xs whitespace-nowrap rounded-full bg-slate-100 hover:bg-primary-500/10 dark:bg-slate-800 dark:hover:bg-primary-500/20 text-slate-700 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-300 border border-slate-200 dark:border-slate-700 transition-colors"
+              disabled={loading}
             >
               {q}
             </button>
@@ -576,12 +641,12 @@ export default function AssistantPage() {
                   : "Ask LifeBridge AI Assistant anything (Enter to send, Shift+Enter for newline)..."
               }
               className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 resize-none focus:outline-none px-2 py-1"
+              aria-label="Message input"
+              disabled={loading}
             />
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700/60 px-2">
-              <div className="text-[11px] text-slate-400">
-                Shift+Enter for newline
-              </div>
+              <div className="text-[11px] text-slate-400">Shift+Enter for newline</div>
 
               <div className="flex items-center gap-2">
                 {loading ? (
@@ -589,6 +654,7 @@ export default function AssistantPage() {
                     type="button"
                     onClick={handleStopGenerating}
                     className="px-4 py-1.5 text-xs font-semibold rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition-colors"
+                    aria-label="Stop generating response"
                   >
                     Stop Generating
                   </button>
@@ -597,8 +663,9 @@ export default function AssistantPage() {
                     {messages.length > 0 && !loading && (
                       <button
                         type="button"
-                        onClick={handleRetry}
+                      onClick={handleRegenerate}
                         className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+                        aria-label="Regenerate last response"
                       >
                         Regenerate
                       </button>
@@ -606,8 +673,9 @@ export default function AssistantPage() {
                     <button
                       type="button"
                       onClick={() => handleSend()}
-                      disabled={!input.trim()}
+                      disabled={!input.trim() || loading}
                       className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white shadow-md transition-all"
+                      aria-label="Send message"
                     >
                       <Icon name="sparkles" size={14} />
                       <span>Send</span>

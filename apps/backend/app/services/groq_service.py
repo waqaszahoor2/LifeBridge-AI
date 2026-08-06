@@ -1,6 +1,6 @@
 import logging
 import uuid
-from typing import Any, AsyncGenerator, Dict, Generator, List, Optional
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Tuple
 from fastapi import HTTPException
 from app.core.config import get_settings
 
@@ -22,6 +22,40 @@ GUARDRAILS:
 2. Keep recommendations practical and project-focused.
 3. Never fabricate unverified course certificates or job guarantees."""
 
+# ---------------------------------------------------------------------------
+# Safe error code mapping
+# ---------------------------------------------------------------------------
+
+_SAFE_ERROR_MAP = {
+    "AuthenticationError": ("PROVIDER_AUTHENTICATION_FAILED", "The AI provider credentials are invalid."),
+    "PermissionDeniedError": ("PROVIDER_AUTHENTICATION_FAILED", "The AI provider access was denied."),
+    "RateLimitError": ("PROVIDER_RATE_LIMITED", "The AI provider's rate limit has been reached. Please try again shortly."),
+    "APITimeoutError": ("PROVIDER_TIMEOUT", "The AI provider did not respond in time. Please try again."),
+    "APIConnectionError": ("PROVIDER_UNAVAILABLE", "The AI assistant is temporarily unavailable. Please try again later."),
+    "BadRequestError": ("INVALID_REQUEST", "The request could not be processed. Please try again."),
+    "NotFoundError": ("INVALID_MODEL", "The configured AI model is not available."),
+    "UnprocessableEntityError": ("INVALID_REQUEST", "The request was not accepted by the AI provider."),
+    "InternalServerError": ("PROVIDER_UNAVAILABLE", "The AI provider encountered an internal error. Please try again later."),
+    "APIStatusError": ("PROVIDER_UNAVAILABLE", "The AI provider returned an unexpected response."),
+    "APIError": ("PROVIDER_UNAVAILABLE", "The AI assistant encountered an unexpected error."),
+}
+
+_GENERIC_SAFE = ("PROVIDER_UNAVAILABLE", "The live AI assistant is temporarily unavailable. Please try again later.")
+
+
+def map_error_to_safe_code(err: Exception) -> Tuple[str, str]:
+    """Map a provider exception to a user-safe (code, message) pair.
+
+    Never exposes: exception class names, API keys, environment variable names,
+    raw error bodies, stack traces, or internal infrastructure messages.
+    """
+    type_name = type(err).__name__
+    return _SAFE_ERROR_MAP.get(type_name, _GENERIC_SAFE)
+
+
+# ---------------------------------------------------------------------------
+# Message formatting — server prompt always first, client system roles discarded
+# ---------------------------------------------------------------------------
 
 def format_messages_for_groq(
     messages: List[Dict[str, str]],
@@ -32,18 +66,22 @@ def format_messages_for_groq(
     if roadmap_context:
         base_prompt += f"\n\nCurrent Roadmap Context: {roadmap_context}"
 
-    # Server system prompt is ALWAYS prepended first (Item 9 Requirement)
+    # Server system prompt is ALWAYS first — cannot be overridden by client
     formatted_messages = [{"role": "system", "content": base_prompt}]
 
-    # Discard any client-supplied "system" messages, accepting ONLY "user" and "assistant" roles
+    # Accept ONLY "user" and "assistant" roles; silently discard everything else
     for msg in messages:
         role = msg.get("role", "user")
         content = msg.get("content", "")
-        if role in ["user", "assistant"] and content and not content.startswith("[Local Demo Mode]") and not content.startswith("The live AI assistant is temporarily unavailable"):
+        if role in ("user", "assistant") and content:
             formatted_messages.append({"role": role, "content": content})
 
     return formatted_messages
 
+
+# ---------------------------------------------------------------------------
+# Non-streaming chat
+# ---------------------------------------------------------------------------
 
 def call_groq_chat(
     messages: List[Dict[str, str]],
@@ -52,7 +90,7 @@ def call_groq_chat(
     max_tokens: int = 1024,
     roadmap_context: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Executes a multi-turn chat completion using Groq AI (llama-3.1-8b-instant)."""
+    """Executes a multi-turn chat completion using Groq AI."""
     settings = get_settings()
     api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
     model = settings.groq_model or "llama-3.1-8b-instant"
@@ -70,9 +108,9 @@ def call_groq_chat(
                     "message": "The live AI assistant is temporarily unavailable.",
                 },
             )
-        # Local Demo Mode fallback (only when ASSISTANT_DEMO_MODE is True)
+        # Local Demo Mode — only when ASSISTANT_DEMO_MODE=true
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-        fallback_reply = generate_generic_demo_response(last_user_msg)
+        fallback_reply = _demo_response(last_user_msg)
         return {
             "message": {"role": "assistant", "content": fallback_reply},
             "reply": fallback_reply,
@@ -81,7 +119,7 @@ def call_groq_chat(
             "conversation_id": conversation_id,
             "provider": "local_demo",
             "citations": [],
-            "disclaimer": "Local Demo Mode.",
+            "disclaimer": "Live AI is unavailable. This is an offline demonstration response.",
             "status": "fallback",
         }
 
@@ -108,17 +146,17 @@ def call_groq_chat(
             "status": "success",
         }
     except Exception as err:
-        logger.error(f"Groq API provider execution error: {type(err).__name__}")
+        safe_code, safe_msg = map_error_to_safe_code(err)
+        logger.error(f"Groq API provider error: {type(err).__name__} → {safe_code}")
+
         if not settings.assistant_demo_mode:
             raise HTTPException(
                 status_code=502,
-                detail={
-                    "error_code": "PROVIDER_ERROR",
-                    "message": "The live AI assistant service encountered a provider error. Please try again.",
-                },
+                detail={"error_code": safe_code, "message": safe_msg},
             )
+
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-        fallback_reply = generate_generic_demo_response(last_user_msg)
+        fallback_reply = _demo_response(last_user_msg)
         return {
             "message": {"role": "assistant", "content": fallback_reply},
             "reply": fallback_reply,
@@ -127,10 +165,14 @@ def call_groq_chat(
             "conversation_id": conversation_id,
             "provider": "local_demo",
             "citations": [],
-            "disclaimer": "Local Demo Mode.",
+            "disclaimer": "Live AI is unavailable. This is an offline demonstration response.",
             "status": "fallback",
         }
 
+
+# ---------------------------------------------------------------------------
+# Async streaming
+# ---------------------------------------------------------------------------
 
 async def stream_groq_chat_async(
     messages: List[Dict[str, str]],
@@ -140,7 +182,13 @@ async def stream_groq_chat_async(
     roadmap_context: Optional[str] = None,
     request_id: Optional[str] = None,
 ) -> AsyncGenerator[Dict[str, Any], None]:
-    """Asynchronous non-blocking Groq token generator using AsyncGroq."""
+    """Asynchronous non-blocking Groq token generator using AsyncGroq.
+
+    SSE event sequence on success:  meta → token… → done
+    SSE event sequence on error:    meta (if key present) → error
+    SSE sequence without key/demo:  error  (no key, not demo mode)
+                                    meta → token → done  (demo mode)
+    """
     settings = get_settings()
     api_key = settings.groq_api_key.strip() if settings.groq_api_key else ""
     model = settings.groq_model or "llama-3.1-8b-instant"
@@ -158,9 +206,17 @@ async def stream_groq_chat_async(
                 "request_id": req_id,
             }
             return
-        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine", "request_id": req_id}
+
+        # Demo mode — emit proper sequence with honest wording
+        yield {
+            "type": "meta",
+            "provider": "local_demo",
+            "status": "fallback",
+            "model": "local_demo_engine",
+            "request_id": req_id,
+        }
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-        demo_reply = generate_generic_demo_response(last_user_msg)
+        demo_reply = _demo_response(last_user_msg)
         yield {"type": "token", "content": demo_reply, "request_id": req_id}
         yield {"type": "done", "request_id": req_id}
         return
@@ -177,7 +233,13 @@ async def stream_groq_chat_async(
             stream=True,
         )
 
-        yield {"type": "meta", "provider": "groq", "status": "success", "model": model, "request_id": req_id}
+        yield {
+            "type": "meta",
+            "provider": "groq",
+            "status": "success",
+            "model": model,
+            "request_id": req_id,
+        }
 
         try:
             async for chunk in completion:
@@ -189,27 +251,55 @@ async def stream_groq_chat_async(
             yield {"type": "done", "request_id": req_id}
         finally:
             if hasattr(completion, "close"):
-                await completion.close()
+                try:
+                    await completion.close()
+                except Exception:
+                    pass
 
     except Exception as err:
-        logger.error(f"[Req {req_id}] Groq async streaming error: {type(err).__name__}")
+        safe_code, safe_msg = map_error_to_safe_code(err)
+        logger.error(f"[Req {req_id}] Groq async streaming error: {type(err).__name__} → {safe_code}")
+
         if not settings.assistant_demo_mode:
             yield {
                 "type": "error",
-                "code": "PROVIDER_ERROR",
-                "message": "The live AI assistant stream is temporarily unavailable.",
+                "code": safe_code,
+                "message": safe_msg,
                 "request_id": req_id,
             }
             return
-        yield {"type": "meta", "provider": "local_demo", "status": "fallback", "model": "local_demo_engine", "request_id": req_id}
+
+        # Demo fallback on provider error when demo mode is enabled
+        yield {
+            "type": "meta",
+            "provider": "local_demo",
+            "status": "fallback",
+            "model": "local_demo_engine",
+            "request_id": req_id,
+        }
         last_user_msg = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-        demo_reply = generate_generic_demo_response(last_user_msg)
+        demo_reply = _demo_response(last_user_msg)
         yield {"type": "token", "content": demo_reply, "request_id": req_id}
         yield {"type": "done", "request_id": req_id}
 
 
-def generate_generic_demo_response(user_query: str) -> str:
+# ---------------------------------------------------------------------------
+# Demo response — user-safe wording, no environment variable names
+# ---------------------------------------------------------------------------
+
+def _demo_response(user_query: str) -> str:
+    """Return a clearly-labelled offline demonstration response.
+
+    Does NOT mention any environment variable names or internal configuration.
+    """
     return (
-        f"[Local Demo Mode] Regarding your query: '{user_query}'\n\n"
-        "To enable live Groq AI completions (llama-3.1-8b-instant), please configure a valid `GROQ_API_KEY` in the FastAPI backend environment."
+        "Live AI is unavailable. This is an offline demonstration response.\n\n"
+        f"Your question was: \"{user_query[:200]}\"\n\n"
+        "To receive a live AI answer, the platform administrator needs to configure "
+        "the AI provider credentials in the backend settings."
     )
+
+
+# Backward-compatible alias kept for any legacy call sites
+def generate_generic_demo_response(user_query: str) -> str:
+    return _demo_response(user_query)
